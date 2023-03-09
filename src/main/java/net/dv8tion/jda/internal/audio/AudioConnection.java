@@ -426,6 +426,10 @@ public class AudioConnection
                                 //decoder error logged in method
                                 continue;
                             }
+                            if (!receiveHandler.shouldReceiveUser(user))
+                            {
+                                continue;
+                            }
                             if (receiveHandler.canReceiveUser())
                             {
                                 receiveHandler.handleUserAudio(new UserAudio(user, decodedAudio));

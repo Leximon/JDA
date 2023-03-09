@@ -52,6 +52,11 @@ public interface AudioReceiveHandler
         return false;
     }
 
+    default boolean shouldReceiveUser(User user)
+    {
+        return true;
+    }
+
     /**
      * If this method returns true, then JDA will provide raw OPUS encoded packets to {@link #handleEncodedAudio(OpusPacket)}.
      * <br>This can be used in combination with the other receive methods but will not be combined audio of multiple users.
