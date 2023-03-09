@@ -25,7 +25,7 @@
 [ ![faq-shield] ][faq]
 [ ![troubleshooting-shield] ][troubleshooting]
 [ ![migration-shield][] ][migration]
-
+# A slightly modified version of the JDA for the Telephone Bot
 
 # JDA (Java Discord API)
 
