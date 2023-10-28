@@ -40,7 +40,7 @@ plugins {
 }
 
 val javaVersion = JavaVersion.current()
-val versionObj = Version(major = "5", minor = "0", revision = "0", classifier = "beta.5")
+val versionObj = Version(major = "5", minor = "0", revision = "0", classifier = "beta.5.1")
 val isCI = System.getProperty("BUILD_NUMBER") != null // jenkins
         || System.getenv("BUILD_NUMBER") != null
         || System.getProperty("GIT_COMMIT") != null // jitpack
@@ -72,7 +72,7 @@ project.version = "$versionObj" + if (isNewVersion) "" else "_$commitHash"
 
 project.group = "net.dv8tion"
 
-val archivesBaseName = "JDA"
+val archivesBaseName = "Telephone-JDA"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -410,6 +410,17 @@ publishing {
             generatePom(pom)
         }
     }
+
+    repositories {
+        maven {
+            name = "tts-craft-releases"
+            url = uri("https://repo.bot-telephone.com/releases")
+            credentials {
+                username = properties["ttscraft_username"].toString()
+                password = properties["ttscraft_password"].toString()
+            }
+        }
+    }
 }
 
 
@@ -445,7 +456,7 @@ configure<NexusPublishExtension> {
 // This links the close/release tasks to the right repository (from the publication above)
 
 val ossrhConfigured = getProjectProperty("ossrhUser") != null
-val shouldPublish = isNewVersion && canSign && ossrhConfigured
+val shouldPublish = true
 
 // Turn off the staging tasks if we don't want to publish
 tasks.withType<InitializeNexusStagingRepository> {

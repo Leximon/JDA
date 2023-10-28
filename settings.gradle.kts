@@ -1,1 +1,1 @@
-rootProject.name = "JDA"
+rootProject.name = "Telephone-JDA"

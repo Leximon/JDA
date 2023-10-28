@@ -191,6 +191,9 @@ public class AudioPacket
 
     protected static AudioPacket decryptAudioPacket(AudioEncryption encryption, DatagramPacket packet, byte[] secretKey)
     {
+        if (packet.getLength() < RTP_HEADER_BYTE_LENGTH)
+            return null;
+
         TweetNaclFast.SecretBox boxer = new TweetNaclFast.SecretBox(secretKey);
         AudioPacket encryptedPacket = new AudioPacket(packet);
         if (encryptedPacket.type != RTP_PAYLOAD_TYPE)
