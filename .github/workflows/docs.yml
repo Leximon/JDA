@@ -1,8 +1,8 @@
 name: Generate javadoc github pages
 
 on:
-  push:
-    branches: [ master ]
+#  push:
+#    branches: [ master ]
   workflow_dispatch:
 
 permissions:
