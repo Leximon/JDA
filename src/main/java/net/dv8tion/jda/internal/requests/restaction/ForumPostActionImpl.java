@@ -22,19 +22,20 @@ import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
+import net.dv8tion.jda.api.entities.channel.attribute.IPostContainer;
 import net.dv8tion.jda.api.entities.channel.concrete.ForumChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.entities.channel.forums.ForumPost;
 import net.dv8tion.jda.api.entities.channel.forums.ForumTagSnowflake;
 import net.dv8tion.jda.api.requests.Request;
 import net.dv8tion.jda.api.requests.Response;
+import net.dv8tion.jda.api.requests.Route;
 import net.dv8tion.jda.api.requests.restaction.ForumPostAction;
 import net.dv8tion.jda.api.utils.data.DataObject;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.dv8tion.jda.internal.entities.EntityBuilder;
 import net.dv8tion.jda.internal.requests.RestActionImpl;
-import net.dv8tion.jda.internal.requests.Route;
 import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.message.MessageCreateBuilderMixin;
 import okhttp3.RequestBody;
@@ -46,12 +47,12 @@ import java.util.function.BooleanSupplier;
 public class ForumPostActionImpl extends RestActionImpl<ForumPost> implements ForumPostAction, MessageCreateBuilderMixin<ForumPostAction>
 {
     private final MessageCreateBuilder builder;
-    private final ForumChannel channel;
+    private final IPostContainer channel;
     private final TLongSet appliedTags = new TLongHashSet();
     private String name;
     private ThreadChannel.AutoArchiveDuration autoArchiveDuration;
 
-    public ForumPostActionImpl(ForumChannel channel, String name, MessageCreateBuilder builder)
+    public ForumPostActionImpl(IPostContainer channel, String name, MessageCreateBuilder builder)
     {
         super(channel.getJDA(), Route.Channels.CREATE_THREAD.compile(channel.getId()));
         this.builder = builder;
@@ -89,7 +90,7 @@ public class ForumPostActionImpl extends RestActionImpl<ForumPost> implements Fo
 
     @Nonnull
     @Override
-    public ForumChannel getChannel()
+    public IPostContainer getChannel()
     {
         return channel;
     }

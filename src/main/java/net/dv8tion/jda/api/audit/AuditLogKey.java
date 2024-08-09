@@ -16,10 +16,9 @@
 
 package net.dv8tion.jda.api.audit;
 
-import net.dv8tion.jda.annotations.DeprecatedSince;
-import net.dv8tion.jda.annotations.ForRemoval;
-import net.dv8tion.jda.annotations.ReplaceWith;
 import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.automod.AutoModRule;
+import net.dv8tion.jda.api.entities.automod.AutoModTriggerType;
 import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.attribute.ICategorizableChannel;
@@ -239,6 +238,14 @@ public enum AuditLogKey
     CHANNEL_TOPIC("topic"),
 
     /**
+     * Change of the {@link VoiceChannel#getStatus() VoiceChannel.getStatus()} value.
+     * <br>Only for {@link ChannelType#VOICE ChannelType.VOICE}
+     *
+     * <p>Expected type: <b>String</b>
+     */
+    CHANNEL_VOICE_STATUS("status"),
+
+    /**
      * Change of the {@link ISlowmodeChannel#getSlowmode()} value.
      *
      * <p>Expected type: <b>Integer</b>
@@ -312,13 +319,28 @@ public enum AuditLogKey
      */
     CHANNEL_AVAILABLE_TAGS("available_tags"),
 
-//    /**
-//     * The {@link ForumChannel#getDefaultSortOrder()} value.
-//     * <br>Only for {@link ChannelType#FORUM}.
-//     *
-//     * <p>Expected type: <b>Integer</b>
-//     */
-//    CHANNEL_DEFAULT_SORT_ORDER("default_sort_order"),
+    /**
+     * The relevant channel for the audit log entry.
+     *
+     * <p>Expected type: <b>String</b>
+     */
+    CHANNEL_ID("channel_id"),
+
+    /**
+     * The {@link ForumChannel#getDefaultSortOrder()} value.
+     * <br>Only for {@link ChannelType#FORUM} and {@link ChannelType#MEDIA}.
+     *
+     * <p>Expected type: <b>Integer</b>
+     */
+    CHANNEL_DEFAULT_SORT_ORDER("default_sort_order"),
+
+    /**
+     * The {@link ForumChannel#getDefaultLayout()} value.
+     * <br>Only for {@link ChannelType#FORUM}.
+     *
+     * <p>Expected type: <b>Integer</b>
+     */
+    DEFAULT_FORUM_LAYOUT("default_forum_layout"),
 
     // THREADS
 
@@ -328,19 +350,6 @@ public enum AuditLogKey
      * <p>Expected type: <b>String</b>
      */
     THREAD_NAME("name"),
-
-    /**
-     * Change of the {@link ISlowmodeChannel#getSlowmode()} value.
-     *
-     * <p>Expected type: <b>Integer</b>
-     *
-     * @deprecated Use {@link #CHANNEL_SLOWMODE} instead
-     */
-    @Deprecated
-    @ForRemoval
-    @DeprecatedSince("5.0.0")
-    @ReplaceWith("CHANNEL_SLOWMODE")
-    THREAD_SLOWMODE("rate_limit_per_user"),
 
     /**
      * Change of the {@link ThreadChannel#getAutoArchiveDuration() ThreadChannel.getAutoArchiveDuration()} value.
@@ -649,7 +658,25 @@ public enum AuditLogKey
      *
      * <p>Expected type: <b>int</b>
      */
-    INVITE_MAX_USES("max_uses");
+    INVITE_MAX_USES("max_uses"),
+
+    // AUTO MODERATION
+    /**
+     * Change of the {@link AutoModRule#getName()} for the target {@link AutoModRule}
+     *
+     * <p>Expected type: <b>String</b>
+     */
+    AUTO_MODERATION_RULE_NAME("auto_moderation_rule_name"),
+
+    /**
+     * The {@link AutoModRule#getTriggerType()} for an {@link AutoModRule} trigger
+     *
+     * <p>Use with {@link AutoModTriggerType#fromKey(int)}
+     *
+     * <p>Expected type: <b>int</b>
+     */
+    AUTO_MODERATION_RULE_TRIGGER_TYPE("auto_moderation_rule_trigger_type"),
+    ;
 
 
     private final String key;

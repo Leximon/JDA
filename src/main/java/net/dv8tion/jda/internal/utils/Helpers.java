@@ -18,7 +18,6 @@ package net.dv8tion.jda.internal.utils;
 
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TLongObjectHashMap;
-import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.utils.data.DataArray;
 import net.dv8tion.jda.api.utils.data.DataObject;
 
@@ -27,6 +26,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collector;
@@ -47,15 +47,6 @@ public final class Helpers
     public static <T> Consumer<T> emptyConsumer()
     {
         return (Consumer<T>) EMPTY_CONSUMER;
-    }
-
-    public static <T extends Channel> T safeChannelCast(Object instance, Class<T> toObjectClass)
-    {
-        if (toObjectClass.isInstance(instance))
-            return toObjectClass.cast(instance);
-
-        String cleanedClassName = instance.getClass().getSimpleName().replace("Impl", "");
-        throw new IllegalStateException(Helpers.format("Cannot convert channel of type %s to %s!", cleanedClassName, toObjectClass.getSimpleName()));
     }
 
     public static OffsetDateTime toOffset(long instant)
@@ -213,6 +204,31 @@ public final class Helpers
         return (int) string.codePoints().count();
     }
 
+    public static String[] split(String input, String match)
+    {
+        List<String> out = new ArrayList<>();
+        int i = 0;
+        while (i < input.length())
+        {
+            int j = input.indexOf(match, i);
+            if (j == -1)
+            {
+                out.add(input.substring(i));
+                break;
+            }
+
+            out.add(input.substring(i, j));
+            i = j + match.length();
+        }
+
+        return out.toArray(new String[0]);
+    }
+
+    public static boolean equals(String a, String b, boolean ignoreCase)
+    {
+        return ignoreCase ? a == b || (a != null && b != null && a.equalsIgnoreCase(b)) : Objects.equals(a, b);
+    }
+
     // ## CollectionUtils ##
 
     public static boolean deepEquals(Collection<?> first, Collection<?> second)
@@ -249,6 +265,12 @@ public final class Helpers
         Set<T> set = new HashSet<>(elements.length);
         Collections.addAll(set, elements);
         return set;
+    }
+
+    @SafeVarargs
+    public static <T> List<T> listOf(T... elements)
+    {
+        return Collections.unmodifiableList(Arrays.asList(elements));
     }
 
     public static TLongObjectMap<DataObject> convertToMap(ToLongFunction<DataObject> getId, DataArray array)
@@ -289,5 +311,33 @@ public final class Helpers
     public static <T> Collector<T, ?, List<T>> toUnmodifiableList()
     {
         return Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList);
+    }
+
+    public static <T> Collector<T, ?, DataArray> toDataArray()
+    {
+        return Collector.of(DataArray::empty, DataArray::add, DataArray::addAll);
+    }
+
+    public static String durationToString(Duration duration, TimeUnit resolutionUnit)
+    {
+        long actual = resolutionUnit.convert(duration.getSeconds(), TimeUnit.SECONDS);
+        String raw = actual + " " + resolutionUnit.toString().toLowerCase(Locale.ROOT);
+
+        long days = duration.toDays();
+        long hours = duration.toHours() % 24;
+        long minutes = duration.toMinutes() % 60;
+        long seconds = duration.getSeconds() - TimeUnit.DAYS.toSeconds(days) - TimeUnit.HOURS.toSeconds(hours) - TimeUnit.MINUTES.toSeconds(minutes);
+
+        StringJoiner joiner = new StringJoiner(" ");
+        if (days > 0)
+            joiner.add(days + " days");
+        if (hours > 0)
+            joiner.add(hours + " hours");
+        if (minutes > 0)
+            joiner.add(minutes + " minutes");
+        if (seconds > 0)
+            joiner.add(seconds + " seconds");
+
+        return raw + " (" + joiner + ")";
     }
 }

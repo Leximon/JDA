@@ -17,17 +17,19 @@
 package net.dv8tion.jda.internal.handle;
 
 import gnu.trove.set.TLongSet;
+import net.dv8tion.jda.api.entities.channel.Channel;
 import net.dv8tion.jda.api.entities.channel.ChannelFlag;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.events.channel.update.*;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import net.dv8tion.jda.api.utils.data.DataArray;
 import net.dv8tion.jda.api.utils.data.DataObject;
 import net.dv8tion.jda.internal.JDAImpl;
+import net.dv8tion.jda.internal.entities.EntityBuilder;
 import net.dv8tion.jda.internal.entities.channel.concrete.ThreadChannelImpl;
 import net.dv8tion.jda.internal.utils.Helpers;
-import net.dv8tion.jda.internal.utils.cache.SnowflakeCacheViewImpl;
-import net.dv8tion.jda.internal.utils.cache.SortedSnowflakeCacheViewImpl;
+import net.dv8tion.jda.internal.utils.cache.ChannelCacheViewImpl;
 
 import java.util.List;
 import java.util.Objects;
@@ -56,14 +58,33 @@ public class ThreadUpdateHandler extends SocketHandler
         //Refer to the documentation for more info: https://discord.com/developers/docs/topics/threads#unarchiving-a-thread
         if (thread == null)
         {
+            // This seems to never be true but its better to check
+            if (content.getObject("thread_metadata").getBoolean("archived"))
+                return null;
+
             //Technically, when the ThreadChannel is unarchived the archive_timestamp (getTimeArchiveInfoLastModified) changes
             // as well, but we don't have the original value because we didn't have the thread in memory, so we can't
             // provide an entirely accurate ChannelUpdateArchiveTimestampEvent. Not sure how much that'll matter.
-            thread = (ThreadChannelImpl) api.getEntityBuilder().createThreadChannel(content, guildId);
-            api.handleEvent(
-                new ChannelUpdateArchivedEvent(
-                    api, responseNumber,
-                    thread, true, false));
+            try
+            {
+                thread = (ThreadChannelImpl) api.getEntityBuilder().createThreadChannel(content, guildId);
+                api.handleEvent(
+                    new ChannelUpdateArchivedEvent(
+                        api, responseNumber,
+                        thread, true, false));
+            }
+            catch (IllegalArgumentException ex)
+            {
+                if (EntityBuilder.MISSING_CHANNEL.equals(ex.getMessage()))
+                {
+                    long parentId = content.getUnsignedLong("parent_id", 0L);
+                    EventCache.LOG.debug("Caching THREAD_UPDATE for a thread with uncached parent. Parent ID: {} JSON: {}", parentId, content);
+                    api.getEventCache().cache(EventCache.Type.CHANNEL, parentId, responseNumber, allContent, this::handle);
+                    return null;
+                }
+
+                throw ex;
+            }
 
             return null;
         }
@@ -88,7 +109,6 @@ public class ThreadUpdateHandler extends SocketHandler
         final int oldFlags = thread.getRawFlags();
 
 
-        //TODO should these be Thread specific events?
         if (!Objects.equals(oldName, name))
         {
             thread.setName(name);
@@ -175,10 +195,10 @@ public class ThreadUpdateHandler extends SocketHandler
 
         if (thread.isArchived())
         {
-            SortedSnowflakeCacheViewImpl<ThreadChannel> guildView = thread.getGuild().getThreadChannelsView();
-            SnowflakeCacheViewImpl<ThreadChannel> globalView = api.getThreadChannelsView();
-            guildView.remove(threadId);
-            globalView.remove(threadId);
+            ChannelCacheViewImpl<GuildChannel> guildView = thread.getGuild().getChannelView();
+            ChannelCacheViewImpl<Channel> globalView = api.getChannelsView();
+            guildView.remove(thread);
+            globalView.remove(thread);
         }
 
         return null;

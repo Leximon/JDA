@@ -22,6 +22,7 @@ import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
 import net.dv8tion.jda.api.interactions.commands.SlashCommandReference;
 import org.apache.commons.collections4.Bag;
+import org.jetbrains.annotations.Unmodifiable;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -58,12 +59,14 @@ public interface Mentions
      * @return Immutable list of mentioned users
      */
     @Nonnull
+    @Unmodifiable
     List<User> getUsers();
 
     /**
      * A {@link org.apache.commons.collections4.Bag Bag} of mentioned {@link net.dv8tion.jda.api.entities.User Users}.
      * <br>This can be used to retrieve the amount of times a user was mentioned. This only
      * counts direct mentions of the user and not mentions through roles or everyone mentions.
+     * The count may be {@code 1}, if the user was mentioned through a message reply.
      *
      * <p>This might also contain users which are not present in {@link #getMembers()}.
      *
@@ -101,6 +104,7 @@ public interface Mentions
      * @return Immutable list of mentioned GuildChannels
      */
     @Nonnull
+    @Unmodifiable
     List<GuildChannel> getChannels();
 
     /**
@@ -160,6 +164,7 @@ public interface Mentions
      * @return Immutable list of mentioned GuildChannels that are of type {@code clazz}.
      */
     @Nonnull
+    @Unmodifiable
     <T extends GuildChannel> List<T> getChannels(@Nonnull Class<T> clazz);
 
     /**
@@ -209,6 +214,7 @@ public interface Mentions
      * @return immutable list of mentioned Roles
      */
     @Nonnull
+    @Unmodifiable
     List<Role> getRoles();
 
     /**
@@ -253,6 +259,7 @@ public interface Mentions
      * @return An immutable list of the Custom Emojis used (example match {@literal <:jda:230988580904763393>})
      */
     @Nonnull
+    @Unmodifiable
     List<CustomEmoji> getCustomEmojis();
 
     /**
@@ -300,6 +307,7 @@ public interface Mentions
      * A {@link org.apache.commons.collections4.Bag Bag} of mentioned {@link net.dv8tion.jda.api.entities.Member Members}.
      * <br>This can be used to retrieve the amount of times a user was mentioned. This only
      * counts direct mentions of the member and not mentions through roles or everyone mentions.
+     * The count may be {@code 1}, if the user was mentioned through a message reply.
      *
      * <p><b>Example</b><br>
      * <pre>{@code
@@ -335,6 +343,7 @@ public interface Mentions
      * @return Immutable list of mentioned slash commands, or an empty list
      */
     @Nonnull
+    @Unmodifiable
     List<SlashCommandReference> getSlashCommands();
 
     /**
@@ -385,6 +394,7 @@ public interface Mentions
      * @return Immutable list of filtered {@link net.dv8tion.jda.api.entities.IMentionable IMentionable} instances
      */
     @Nonnull
+    @Unmodifiable
     List<IMentionable> getMentions(@Nonnull Message.MentionType... types);
 
     /**

@@ -18,8 +18,8 @@ package net.dv8tion.jda.internal.managers;
 
 import net.dv8tion.jda.api.entities.StageInstance;
 import net.dv8tion.jda.api.managers.StageInstanceManager;
+import net.dv8tion.jda.api.requests.Route;
 import net.dv8tion.jda.api.utils.data.DataObject;
-import net.dv8tion.jda.internal.requests.Route;
 import net.dv8tion.jda.internal.utils.Checks;
 import okhttp3.RequestBody;
 
@@ -64,12 +64,11 @@ public class StageInstanceManagerImpl extends ManagerBase<StageInstanceManager> 
 
     @Nonnull
     @Override
-    @SuppressWarnings("deprecation")
+    @Deprecated
     public StageInstanceManager setPrivacyLevel(@Nonnull StageInstance.PrivacyLevel level)
     {
         Checks.notNull(level, "PrivacyLevel");
         Checks.check(level != StageInstance.PrivacyLevel.UNKNOWN, "PrivacyLevel must not be UNKNOWN!");
-        Checks.check(level != StageInstance.PrivacyLevel.PUBLIC, "Cannot create PUBLIC stage instances anymore.");
         this.privacyLevel = level;
         set |= PRIVACY_LEVEL;
         return this;

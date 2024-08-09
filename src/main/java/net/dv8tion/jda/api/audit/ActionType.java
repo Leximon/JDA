@@ -18,6 +18,7 @@ package net.dv8tion.jda.api.audit;
 
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.ScheduledEvent;
+import net.dv8tion.jda.api.entities.channel.attribute.IVoiceStatusChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
 
@@ -550,7 +551,7 @@ public enum ActionType
      * <p><b>Possible Keys</b><br>
      * <ul>
      *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_NAME THREAD_NAME}</li>
-     *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_SLOWMODE THREAD_SLOWMODE}</li>
+     *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#CHANNEL_SLOWMODE CHANNEL_SLOWMODE}</li>
      *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_ARCHIVED THREAD_ARCHIVED}</li>
      *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_AUTO_ARCHIVE_DURATION THREAD_AUTO_ARCHIVE_DURATION}</li>
      *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_LOCKED THREAD_LOCKED}</li>
@@ -566,7 +567,7 @@ public enum ActionType
      * <p><b>Possible Keys</b><br>
      * <ul>
      *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_NAME THREAD_NAME}</li>
-     *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_SLOWMODE THREAD_SLOWMODE}</li>
+     *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#CHANNEL_SLOWMODE CHANNEL_SLOWMODE}</li>
      *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_ARCHIVED THREAD_ARCHIVED}</li>
      *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_AUTO_ARCHIVE_DURATION THREAD_AUTO_ARCHIVE_DURATION}</li>
      *     <li>{@link net.dv8tion.jda.api.audit.AuditLogKey#THREAD_LOCKED THREAD_LOCKED}</li>
@@ -585,6 +586,76 @@ public enum ActionType
      * A moderator updated the privileges for an application
      */
     APPLICATION_COMMAND_PRIVILEGES_UPDATE(121, TargetType.INTEGRATION),
+
+    /**
+     * A moderator created a new {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}
+     */
+    AUTO_MODERATION_RULE_CREATE(140, TargetType.AUTO_MODERATION_RULE),
+
+    /**
+     * A moderator updated an existing {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}
+     */
+    AUTO_MODERATION_RULE_UPDATE(141, TargetType.AUTO_MODERATION_RULE),
+
+    /**
+     * A moderator deleted an existing {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}
+     */
+    AUTO_MODERATION_RULE_DELETE(142, TargetType.AUTO_MODERATION_RULE),
+
+    /**
+     * An automod rule blocked a message from being sent
+     *
+     * <p><b>Possible Keys</b><br>
+     * <ul>
+     *     <li>{@link AuditLogKey#AUTO_MODERATION_RULE_NAME AUTO_MODERATION_RULE_NAME}</li>
+     *     <li>{@link AuditLogKey#AUTO_MODERATION_RULE_TRIGGER_TYPE AUTO_MODERATION_RULE_TRIGGER_TYPE}</li>
+     *     <li>{@link AuditLogKey#CHANNEL_ID CHANNEL_ID}</li>
+     * </ul>
+     */
+    AUTO_MODERATION_RULE_BLOCK_MESSAGE(143, TargetType.MEMBER),
+
+    /**
+     * An automod rule sent an alert to a channel
+     *
+     * <p><b>Possible Keys</b><br>
+     * <ul>
+     *     <li>{@link AuditLogKey#AUTO_MODERATION_RULE_NAME AUTO_MODERATION_RULE_NAME}</li>
+     *     <li>{@link AuditLogKey#AUTO_MODERATION_RULE_TRIGGER_TYPE AUTO_MODERATION_RULE_TRIGGER_TYPE}</li>
+     * </ul>
+     */
+    AUTO_MODERATION_FLAG_TO_CHANNEL(   144, TargetType.MEMBER),
+
+    /**
+     * An automod rule put a user in {@link Member#isTimedOut() timeout}
+     *
+     * <p><b>Possible Keys</b><br>
+     * <ul>
+     *     <li>{@link AuditLogKey#AUTO_MODERATION_RULE_NAME AUTO_MODERATION_RULE_NAME}</li>
+     *     <li>{@link AuditLogKey#AUTO_MODERATION_RULE_TRIGGER_TYPE AUTO_MODERATION_RULE_TRIGGER_TYPE}</li>
+     * </ul>
+     */
+    AUTO_MODERATION_MEMBER_TIMEOUT(    145, TargetType.MEMBER),
+
+    /**
+     * A user updated the {@link IVoiceStatusChannel#getStatus() status} of a voice channel.
+     *
+     * <p><b>Possible Keys</b><br>
+     * <ul>
+     *     <li>{@link AuditLogKey#CHANNEL_VOICE_STATUS CHANNEL_VOICE_STATUS}</li>
+     *     <li>{@link AuditLogKey#CHANNEL_ID CHANNEL_ID}</li>
+     * </ul>
+     */
+    VOICE_CHANNEL_STATUS_UPDATE(192, TargetType.CHANNEL),
+
+    /**
+     * A user removed the {@link IVoiceStatusChannel#getStatus() status} of a voice channel.
+     *
+     * <p><b>Possible Keys</b><br>
+     * <ul>
+     *     <li>{@link AuditLogKey#CHANNEL_ID CHANNEL_ID}</li>
+     * </ul>
+     */
+    VOICE_CHANNEL_STATUS_DELETE(193, TargetType.CHANNEL),
 
     UNKNOWN(-1, TargetType.UNKNOWN);
 

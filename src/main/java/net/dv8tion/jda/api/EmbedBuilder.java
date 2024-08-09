@@ -18,6 +18,8 @@ package net.dv8tion.jda.api;
 import net.dv8tion.jda.api.entities.EmbedType;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.Role;
+import net.dv8tion.jda.api.utils.data.DataArray;
+import net.dv8tion.jda.api.utils.data.DataObject;
 import net.dv8tion.jda.internal.entities.EntityBuilder;
 import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.Helpers;
@@ -27,6 +29,7 @@ import javax.annotation.Nullable;
 import java.awt.*;
 import java.time.OffsetDateTime;
 import java.time.temporal.TemporalAccessor;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -35,7 +38,7 @@ import java.util.regex.Pattern;
  * Builder system used to build {@link net.dv8tion.jda.api.entities.MessageEmbed MessageEmbeds}.
  *
  * <br>A visual breakdown of an Embed and how it relates to this class is available at
- * <a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/01-Overview.png" target="_blank">Embed Overview</a>.
+ * <a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/01-Overview.png" target="_blank">Embed Overview</a>.
  *
  * @since  3.0
  * @author John A. Grosh
@@ -45,7 +48,7 @@ public class EmbedBuilder
     public final static String ZERO_WIDTH_SPACE = "\u200E";
     public final static Pattern URL_PATTERN = Pattern.compile("\\s*(https?|attachment)://\\S+\\s*", Pattern.CASE_INSENSITIVE);
 
-    private final List<MessageEmbed.Field> fields = new LinkedList<>();
+    private final List<MessageEmbed.Field> fields = new ArrayList<>();
     private final StringBuilder description = new StringBuilder();
     private int color = Role.DEFAULT_COLOR_RAW;
     private String url, title;
@@ -85,11 +88,82 @@ public class EmbedBuilder
     }
 
     /**
+     * Creates an instance of this builder from the provided {@link DataObject}.
+     *
+     * <p>This is the inverse of {@link MessageEmbed#toData()}.
+     *
+     * @param  data
+     *         The serialized embed object
+     *
+     * @throws IllegalArgumentException
+     *         If the provided data is {@code null} or invalid
+     * @throws net.dv8tion.jda.api.exceptions.ParsingException
+     *         If the provided data is malformed
+     *
+     * @return The new builder instance
+     */
+    @Nonnull
+    public static EmbedBuilder fromData(@Nonnull DataObject data)
+    {
+        Checks.notNull(data, "DataObject");
+        EmbedBuilder builder = new EmbedBuilder();
+
+        builder.setTitle(data.getString("title", null));
+        builder.setUrl(data.getString("url", null));
+        builder.setDescription(data.getString("description", ""));
+        builder.setTimestamp(data.isNull("timestamp") ? null : OffsetDateTime.parse(data.getString("timestamp")));
+        builder.setColor(data.getInt("color", Role.DEFAULT_COLOR_RAW));
+
+        data.optObject("thumbnail").ifPresent(thumbnail ->
+            builder.setThumbnail(thumbnail.getString("url"))
+        );
+
+        data.optObject("author").ifPresent(author ->
+            builder.setAuthor(
+                author.getString("name", ""),
+                author.getString("url", null),
+                author.getString("icon_url", null)
+            )
+        );
+
+        data.optObject("footer").ifPresent(footer ->
+            builder.setFooter(
+                footer.getString("text", ""),
+                footer.getString("icon_url", null)
+            )
+        );
+
+        data.optObject("image").ifPresent(image ->
+            builder.setImage(image.getString("url"))
+        );
+
+        data.optArray("fields").ifPresent(arr ->
+            arr.stream(DataArray::getObject).forEach(field ->
+                builder.addField(
+                    field.getString("name", ZERO_WIDTH_SPACE),
+                    field.getString("value", ZERO_WIDTH_SPACE),
+                    field.getBoolean("inline", false)
+                )
+            )
+        );
+
+        return builder;
+    }
+
+    /**
      * Returns a {@link net.dv8tion.jda.api.entities.MessageEmbed MessageEmbed}
      * that has been checked as being valid for sending.
      *
      * @throws java.lang.IllegalStateException
-     *         If the embed is empty. Can be checked with {@link #isEmpty()}.
+     *         <ul>
+     *             <li>If the embed is empty. Can be checked with {@link #isEmpty()}.</li>
+     *             <li>If the character limit for {@code description}, defined by {@link net.dv8tion.jda.api.entities.MessageEmbed#DESCRIPTION_MAX_LENGTH} as {@value net.dv8tion.jda.api.entities.MessageEmbed#DESCRIPTION_MAX_LENGTH},
+     *             is exceeded.</li>
+     *             <li>If the embed's total length, defined by {@link net.dv8tion.jda.api.entities.MessageEmbed#EMBED_MAX_LENGTH_BOT} as {@value net.dv8tion.jda.api.entities.MessageEmbed#EMBED_MAX_LENGTH_BOT},
+     *             is exceeded.</li>
+     *             <li>If the embed's number of embed fields, defined by {@link net.dv8tion.jda.api.entities.MessageEmbed#MAX_FIELD_AMOUNT} as {@value net.dv8tion.jda.api.entities.MessageEmbed#MAX_FIELD_AMOUNT},
+     *             is exceeded.</li>
+     *         </ul>
      *
      * @return the built, sendable {@link net.dv8tion.jda.api.entities.MessageEmbed}
      */
@@ -101,7 +175,9 @@ public class EmbedBuilder
         if (description.length() > MessageEmbed.DESCRIPTION_MAX_LENGTH)
             throw new IllegalStateException(Helpers.format("Description is longer than %d! Please limit your input!", MessageEmbed.DESCRIPTION_MAX_LENGTH));
         if (length() > MessageEmbed.EMBED_MAX_LENGTH_BOT)
-            throw new IllegalStateException("Cannot build an embed with more than " + MessageEmbed.EMBED_MAX_LENGTH_BOT + " characters!");
+            throw new IllegalStateException(Helpers.format("Cannot build an embed with more than %d characters!", MessageEmbed.EMBED_MAX_LENGTH_BOT));
+        if (fields.size() > MessageEmbed.MAX_FIELD_AMOUNT)
+            throw new IllegalStateException(Helpers.format("Cannot build an embed with more than %d embed fields set!", MessageEmbed.MAX_FIELD_AMOUNT));
         final String description = this.description.length() < 1 ? null : this.description.toString();
 
         return EntityBuilder.createMessageEmbed(url, title, description, EmbedType.RICH, timestamp,
@@ -238,7 +314,7 @@ public class EmbedBuilder
      * Sets the Title of the embed.
      * <br>Overload for {@link #setTitle(String, String)} without URL parameter.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/04-setTitle.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/04-setTitle.png">Example</a></b>
      *
      * @param  title
      *         the title of the embed
@@ -261,8 +337,9 @@ public class EmbedBuilder
     /**
      * Sets the Title of the embed.
      * <br>You can provide {@code null} as url if no url should be used.
+     * <br>If you want to set a URL without a title, use {@link #setUrl(String)} instead.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/04-setTitle.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/04-setTitle.png">Example</a></b>
      *
      * @param  title
      *         the title of the embed
@@ -304,6 +381,34 @@ public class EmbedBuilder
     }
 
     /**
+     * Sets the URL of the embed.
+     * <br>The Discord client mostly only uses this property in combination with the {@link #setTitle(String) title} for a clickable Hyperlink.
+     *
+     * <p>If multiple embeds in a message use the same URL, the Discord client will merge them into a single embed and aggregate images into a gallery view.
+     *
+     * @throws java.lang.IllegalArgumentException
+     *         <ul>
+     *             <li>If the character limit for {@code url}, defined by {@link net.dv8tion.jda.api.entities.MessageEmbed#URL_MAX_LENGTH} as {@value net.dv8tion.jda.api.entities.MessageEmbed#URL_MAX_LENGTH},
+     *             is exceeded.</li>
+     *             <li>If the provided {@code url} is not a properly formatted http or https url.</li>
+     *         </ul>
+     *
+     * @return the builder after the URL has been set
+     *
+     * @see    #setTitle(String, String)
+     */
+    @Nonnull
+    public EmbedBuilder setUrl(@Nullable String url)
+    {
+        if (Helpers.isBlank(url))
+            url = null;
+        urlCheck(url);
+        this.url = url;
+
+        return this;
+    }
+
+    /**
      * The {@link java.lang.StringBuilder StringBuilder} used to
      * build the description for the embed.
      * <br>Note: To reset the description use {@link #setDescription(CharSequence) setDescription(null)}
@@ -319,7 +424,7 @@ public class EmbedBuilder
     /**
      * Sets the Description of the embed. This is where the main chunk of text for an embed is typically placed.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/05-setDescription.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/05-setDescription.png">Example</a></b>
      *
      * @param  description
      *         the description of the embed, {@code null} to reset
@@ -342,7 +447,7 @@ public class EmbedBuilder
     /**
      * Appends to the description of the embed. This is where the main chunk of text for an embed is typically placed.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/05-setDescription.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/05-setDescription.png">Example</a></b>
      *
      * @param  description
      *         the string to append to the description of the embed
@@ -369,7 +474,7 @@ public class EmbedBuilder
     /**
      * Sets the Timestamp of the embed.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/13-setTimestamp.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/13-setTimestamp.png">Example</a></b>
      *
      * <p><b>Hint:</b> You can get the current time using {@link java.time.Instant#now() Instant.now()} or convert time from a
      * millisecond representation by using {@link java.time.Instant#ofEpochMilli(long) Instant.ofEpochMilli(long)};
@@ -389,7 +494,7 @@ public class EmbedBuilder
     /**
      * Sets the Color of the embed.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/02-setColor.png" target="_blank">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/02-setColor.png" target="_blank">Example</a></b>
      *
      * @param  color
      *         The {@link java.awt.Color Color} of the embed
@@ -409,7 +514,7 @@ public class EmbedBuilder
     /**
      * Sets the raw RGB color value for the embed.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/02-setColor.png" target="_blank">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/02-setColor.png" target="_blank">Example</a></b>
      *
      * @param  color
      *         The raw rgb value, or {@link Role#DEFAULT_COLOR_RAW} to use no color
@@ -428,7 +533,7 @@ public class EmbedBuilder
     /**
      * Sets the Thumbnail of the embed.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/06-setThumbnail.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/06-setThumbnail.png">Example</a></b>
      *
      * <p><b>Uploading images with Embeds</b>
      * <br>When uploading an <u>image</u>
@@ -475,7 +580,7 @@ public class EmbedBuilder
     /**
      * Sets the Image of the embed.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/11-setImage.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/11-setImage.png">Example</a></b>
      *
      * <p><b>Uploading images with Embeds</b>
      * <br>When uploading an <u>image</u>
@@ -526,7 +631,7 @@ public class EmbedBuilder
      * image beside it along with the author's name being made clickable by way of providing a url.
      * This convenience method just sets the name.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/03-setAuthor.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/03-setAuthor.png">Example</a></b>
      *
      * @param  name
      *         the name of the author of the embed. If this is not set, the author will not appear in the embed
@@ -548,7 +653,7 @@ public class EmbedBuilder
      * image beside it along with the author's name being made clickable by way of providing a url.
      * This convenience method just sets the name and the url.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/03-setAuthor.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/03-setAuthor.png">Example</a></b>
      *
      * @param  name
      *         the name of the author of the embed. If this is not set, the author will not appear in the embed
@@ -576,7 +681,7 @@ public class EmbedBuilder
      * Sets the Author of the embed. The author appears in the top left of the embed and can have a small
      * image beside it along with the author's name being made clickable by way of providing a url.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/03-setAuthor.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/03-setAuthor.png">Example</a></b>
      *
      * <p><b>Uploading images with Embeds</b>
      * <br>When uploading an <u>image</u>
@@ -617,15 +722,14 @@ public class EmbedBuilder
     @Nonnull
     public EmbedBuilder setAuthor(@Nullable String name, @Nullable String url, @Nullable String iconUrl)
     {
-        //We only check if the name is null because its presence is what determines if the
-        // the author will appear in the embed.
+        // We only check if the name is null because its presence is what determines if the author will appear in the embed.
         if (name == null)
         {
             this.author = null;
         }
         else
         {
-            Checks.check(name.length() <= MessageEmbed.AUTHOR_MAX_LENGTH, "Name cannot be longer than %d characters.", MessageEmbed.AUTHOR_MAX_LENGTH);
+            Checks.notLonger(name, MessageEmbed.AUTHOR_MAX_LENGTH, "Name");
             urlCheck(url);
             urlCheck(iconUrl);
             this.author = new MessageEmbed.AuthorInfo(name, url, iconUrl, null);
@@ -636,7 +740,7 @@ public class EmbedBuilder
     /**
      * Sets the Footer of the embed without icon.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/12-setFooter.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/12-setFooter.png">Example</a></b>
      *
      * @param  text
      *         the text of the footer of the embed. If this is not set or set to null, the footer will not appear in the embed.
@@ -656,7 +760,7 @@ public class EmbedBuilder
     /**
      * Sets the Footer of the embed.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/12-setFooter.png">Example</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/12-setFooter.png">Example</a></b>
      *
      * <p><b>Uploading images with Embeds</b>
      * <br>When uploading an <u>image</u>
@@ -700,7 +804,7 @@ public class EmbedBuilder
         }
         else
         {
-            Checks.check(text.length() <= MessageEmbed.TEXT_MAX_LENGTH, "Text cannot be longer than %d characters.", MessageEmbed.TEXT_MAX_LENGTH);
+            Checks.notLonger(text, MessageEmbed.TEXT_MAX_LENGTH, "Text");
             urlCheck(iconUrl);
             this.footer = new MessageEmbed.Footer(text, iconUrl, null);
         }
@@ -728,8 +832,8 @@ public class EmbedBuilder
      * <p>Note: If a blank string is provided to either {@code name} or {@code value}, the blank string is replaced
      * with {@link net.dv8tion.jda.api.EmbedBuilder#ZERO_WIDTH_SPACE}.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/07-addField.png">Example of Inline</a></b>
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/08-addField.png">Example if Non-inline</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/07-addField.png">Example of Inline</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/08-addField.png">Example of Non-inline</a></b>
      *
      * @param  name
      *         the name of the Field, displayed in bold above the {@code value}.
@@ -761,8 +865,8 @@ public class EmbedBuilder
     /**
      * Adds a blank (empty) Field to the embed.
      *
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/07-addField.png">Example of Inline</a></b>
-     * <p><b><a href="https://raw.githubusercontent.com/DV8FromTheWorld/JDA/assets/assets/docs/embeds/08-addField.png">Example if Non-inline</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/07-addField.png">Example of Inline</a></b>
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/08-addField.png">Example of Non-inline</a></b>
      *
      * @param  inline
      *         whether or not this field should display inline
@@ -809,7 +913,7 @@ public class EmbedBuilder
     {
         if (url != null)
         {
-            Checks.check(url.length() <= MessageEmbed.URL_MAX_LENGTH, "URL cannot be longer than %d characters.", MessageEmbed.URL_MAX_LENGTH);
+            Checks.notLonger(url, MessageEmbed.URL_MAX_LENGTH, "URL");
             Checks.check(URL_PATTERN.matcher(url).matches(), "URL must be a valid http(s) or attachment url.");
         }
     }

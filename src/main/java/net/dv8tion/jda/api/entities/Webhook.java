@@ -22,9 +22,9 @@ import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.entities.channel.unions.IWebhookContainerUnion;
 import net.dv8tion.jda.api.managers.WebhookManager;
 import net.dv8tion.jda.api.requests.RestAction;
+import net.dv8tion.jda.api.requests.Route;
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction;
 import net.dv8tion.jda.internal.requests.RestActionImpl;
-import net.dv8tion.jda.internal.requests.Route;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -40,7 +40,7 @@ import java.util.regex.Pattern;
  * @see    Guild#retrieveWebhooks()
  * @see    JDA#retrieveWebhookById(String)
  */
-public interface Webhook extends ISnowflake
+public interface Webhook extends ISnowflake, WebhookClient<Message>
 {
     /**
      * Pattern for a Webhook URL.

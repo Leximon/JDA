@@ -25,7 +25,6 @@ import net.dv8tion.jda.api.exceptions.RateLimitedException;
 import net.dv8tion.jda.internal.JDAImpl;
 import net.dv8tion.jda.internal.requests.CallbackContext;
 import net.dv8tion.jda.internal.requests.RestActionImpl;
-import net.dv8tion.jda.internal.requests.Route;
 import net.dv8tion.jda.internal.utils.IOUtil;
 import okhttp3.MultipartBody;
 import okhttp3.RequestBody;
@@ -38,6 +37,11 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
+/**
+ * Internal class used for representing HTTP requests.
+ *
+ * @param <T> The expected type of the response
+ */
 public class Request<T>
 {
     private final JDAImpl api;
@@ -109,11 +113,13 @@ public class Request<T>
             return;
         done = true;
         cleanup();
+        RestActionImpl.LOG.trace("Scheduling success callback for request with route {}/{}", route.getMethod(), route.getCompiledRoute());
         api.getCallbackPool().execute(() ->
         {
             try (ThreadLocalReason.Closable __ = ThreadLocalReason.closable(localReason);
                  CallbackContext ___ = CallbackContext.getInstance())
             {
+                RestActionImpl.LOG.trace("Running success callback for request with route {}/{}", route.getMethod(), route.getCompiledRoute());
                 onSuccess.accept(successObj);
             }
             catch (Throwable t)
@@ -132,13 +138,24 @@ public class Request<T>
     {
         if (response.code == 429)
         {
-            onFailure(new RateLimitedException(route, response.retryAfter));
+            onRateLimited(response);
         }
         else
         {
-            onFailure(ErrorResponseException.create(
-                    ErrorResponse.fromJSON(response.optObject().orElse(null)), response));
+            onFailure(createErrorResponseException(response));
         }
+    }
+
+    public void onRateLimited(Response response)
+    {
+        onFailure(new RateLimitedException(route, response.retryAfter));
+    }
+
+    @Nonnull
+    public ErrorResponseException createErrorResponseException(@Nonnull Response response)
+    {
+        return ErrorResponseException.create(
+                ErrorResponse.fromJSON(response.optObject().orElse(null)), response);
     }
 
     public void onFailure(Throwable failException)
@@ -147,11 +164,13 @@ public class Request<T>
             return;
         done = true;
         cleanup();
+        RestActionImpl.LOG.trace("Scheduling failure callback for request with route {}/{}", route.getMethod(), route.getCompiledRoute());
         api.getCallbackPool().execute(() ->
         {
             try (ThreadLocalReason.Closable __ = ThreadLocalReason.closable(localReason);
                  CallbackContext ___ = CallbackContext.getInstance())
             {
+                RestActionImpl.LOG.trace("Running failure callback for request with route {}/{}", route.getMethod(), route.getCompiledRoute());
                 onFailure.accept(failException);
                 if (failException instanceof Error)
                     api.handleEvent(new ExceptionEvent(api, failException, false));
@@ -269,6 +288,8 @@ public class Request<T>
 
     public void cancel()
     {
+        if (!this.isCancelled)
+            onCancelled();
         this.isCancelled = true;
     }
 
@@ -279,6 +300,7 @@ public class Request<T>
 
     public void handleResponse(@Nonnull Response response)
     {
+        RestActionImpl.LOG.trace("Handling response for request with route {}/{} and code {}", route.getMethod(), route.getCompiledRoute(), response.code);
         restAction.handleResponse(response, this);
         api.handleEvent(new HttpRequestEvent(this, response));
     }

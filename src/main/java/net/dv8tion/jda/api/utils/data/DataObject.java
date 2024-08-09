@@ -16,10 +16,14 @@
 
 package net.dv8tion.jda.api.utils.data;
 
+import com.fasterxml.jackson.core.FormatFeature;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.json.JsonWriteFeature;
 import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.type.MapType;
 import net.dv8tion.jda.api.exceptions.ParsingException;
@@ -850,12 +854,12 @@ public class DataObject implements SerializableData
     @Nonnull
     public String toPrettyString()
     {
-        DefaultPrettyPrinter.Indenter indent = new DefaultIndenter("    ", DefaultIndenter.SYS_LF);
-        DefaultPrettyPrinter printer = new DefaultPrettyPrinter();
-        printer.withObjectIndenter(indent).withArrayIndenter(indent);
         try
         {
-            return mapper.writer(printer).writeValueAsString(data);
+            return mapper.writer(new DefaultPrettyPrinter())
+                    .with(SerializationFeature.INDENT_OUTPUT)
+                    .with(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS)
+                    .writeValueAsString(data);
         }
         catch (JsonProcessingException e)
         {
@@ -910,5 +914,21 @@ public class DataObject implements SerializableData
 
         throw new ParsingException(Helpers.format("Cannot parse value for %s into type %s: %s instance of %s",
                                                       key, type.getSimpleName(), value, value.getClass().getSimpleName()));
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (obj == this)
+            return true;
+        if (!(obj instanceof DataObject))
+            return false;
+        return ((DataObject) obj).toMap().equals(this.toMap());
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return toMap().hashCode();
     }
 }

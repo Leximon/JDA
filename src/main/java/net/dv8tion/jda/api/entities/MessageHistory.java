@@ -25,6 +25,7 @@ import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
 import net.dv8tion.jda.api.requests.Request;
 import net.dv8tion.jda.api.requests.Response;
 import net.dv8tion.jda.api.requests.RestAction;
+import net.dv8tion.jda.api.requests.Route;
 import net.dv8tion.jda.api.utils.MiscUtil;
 import net.dv8tion.jda.api.utils.TimeUtil;
 import net.dv8tion.jda.api.utils.data.DataArray;
@@ -32,10 +33,10 @@ import net.dv8tion.jda.api.utils.data.DataObject;
 import net.dv8tion.jda.internal.JDAImpl;
 import net.dv8tion.jda.internal.entities.EntityBuilder;
 import net.dv8tion.jda.internal.requests.RestActionImpl;
-import net.dv8tion.jda.internal.requests.Route;
 import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.JDALogger;
 import org.apache.commons.collections4.map.ListOrderedMap;
+import org.jetbrains.annotations.Unmodifiable;
 import org.slf4j.Logger;
 
 import javax.annotation.CheckReturnValue;
@@ -182,7 +183,7 @@ public class MessageHistory
      */
     @Nonnull
     @CheckReturnValue
-    public RestAction<List<Message>> retrievePast(int amount)
+    public RestAction<@Unmodifiable List<Message>> retrievePast(int amount)
     {
         if (amount > 100 || amount < 1)
             throw new IllegalArgumentException("Message retrieval limit is between 1 and 100 messages. No more, no less. Limit provided: " + amount);
@@ -253,7 +254,6 @@ public class MessageHistory
      * @throws java.lang.IllegalStateException
      *         If no messages have been retrieved by this MessageHistory.
      *
-     *
      * @return {@link net.dv8tion.jda.api.requests.RestAction RestAction} -
      *         Type: {@link java.util.List List}{@literal <}{@link net.dv8tion.jda.api.entities.Message Message}{@literal >}
      *         <br>Retrieved Messages are placed in a List and provided in order of most recent to oldest with most recent
@@ -261,7 +261,7 @@ public class MessageHistory
      */
     @Nonnull
     @CheckReturnValue
-    public RestAction<List<Message>> retrieveFuture(int amount)
+    public RestAction<@Unmodifiable List<Message>> retrieveFuture(int amount)
     {
         if (amount > 100 || amount < 1)
             throw new IllegalArgumentException("Message retrieval limit is between 1 and 100 messages. No more, no less. Limit provided: " + amount);
@@ -310,6 +310,7 @@ public class MessageHistory
      * @return An immutable List of Messages, sorted newest to oldest.
      */
     @Nonnull
+    @Unmodifiable
     public List<Message> getRetrievedHistory()
     {
         int size = size();

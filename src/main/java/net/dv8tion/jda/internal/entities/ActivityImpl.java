@@ -18,6 +18,7 @@ package net.dv8tion.jda.internal.entities;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.entities.RichPresence;
 import net.dv8tion.jda.api.entities.emoji.EmojiUnion;
+import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.EntityString;
 
 import javax.annotation.Nonnull;
@@ -28,6 +29,7 @@ public class ActivityImpl implements Activity
 {
     protected final String name;
     protected final String url;
+    protected final String state;
     protected final ActivityType type;
     protected final Timestamps timestamps;
     protected final EmojiUnion emoji;
@@ -44,12 +46,18 @@ public class ActivityImpl implements Activity
 
     protected ActivityImpl(String name, String url, ActivityType type)
     {
-        this(name, url, type, null, null);
+        this(name, null, url, type, null, null);
     }
 
-    protected ActivityImpl(String name, String url, ActivityType type, RichPresence.Timestamps timestamps, EmojiUnion emoji)
+    protected ActivityImpl(String name, String state, String url, ActivityType type)
+    {
+        this(name, state, url, type, null, null);
+    }
+
+    protected ActivityImpl(String name, String state, String url, ActivityType type, Activity.Timestamps timestamps, EmojiUnion emoji)
     {
         this.name = name;
+        this.state = state;
         this.url = url;
         this.type = type;
         this.timestamps = timestamps;
@@ -75,6 +83,13 @@ public class ActivityImpl implements Activity
         return name;
     }
 
+    @Nullable
+    @Override
+    public String getState()
+    {
+        return state;
+    }
+
     @Override
     public String getUrl()
     {
@@ -89,7 +104,7 @@ public class ActivityImpl implements Activity
     }
 
     @Nullable
-    public RichPresence.Timestamps getTimestamps()
+    public Activity.Timestamps getTimestamps()
     {
         return timestamps;
     }
@@ -99,6 +114,22 @@ public class ActivityImpl implements Activity
     public EmojiUnion getEmoji()
     {
         return emoji;
+    }
+
+    @Nonnull
+    @Override
+    public Activity withState(@Nullable String state)
+    {
+        if (state != null)
+        {
+            state = state.trim();
+            if (state.isEmpty())
+                state = null;
+            else
+                Checks.notLonger(state, MAX_ACTIVITY_STATE_LENGTH, "State");
+        }
+
+        return new ActivityImpl(name, state, url, type);
     }
 
     @Override
@@ -112,6 +143,7 @@ public class ActivityImpl implements Activity
         ActivityImpl oGame = (ActivityImpl) o;
         return oGame.getType() == type
                && Objects.equals(name, oGame.getName())
+               && Objects.equals(state, oGame.state)
                && Objects.equals(url, oGame.getUrl())
                && Objects.equals(timestamps, oGame.timestamps);
     }
@@ -119,7 +151,7 @@ public class ActivityImpl implements Activity
     @Override
     public int hashCode()
     {
-        return Objects.hash(name, type, url, timestamps);
+        return Objects.hash(name, state, type, url, timestamps);
     }
 
     @Override

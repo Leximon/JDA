@@ -17,6 +17,7 @@
 package net.dv8tion.jda.api.utils;
 
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.requests.RestRateLimiter;
 
 import javax.annotation.Nonnull;
 
@@ -34,8 +35,7 @@ import javax.annotation.Nonnull;
  *
  * <p><b>Global REST Ratelimit</b>
  * <br>The global REST ratelimit is not bound to a single session and should be
- * handled on all JDA instances. This controller will receive updates of this ratelimit through {@link #setGlobalRatelimit(long)}
- * and should report the last ratelimit information it received through {@link #getGlobalRatelimit()}.
+ * handled on all JDA instances. This controller will manage the global ratelimit using {@link #getRateLimitHandle}.
  *
  * <p><b>Gateway Provider</b>
  * <br>This provider can be used to change the gateway retrieval (using cache, http, or static) and
@@ -123,24 +123,21 @@ public interface SessionController
     void removeSession(@Nonnull SessionConnectNode node);
 
     /**
-     * Provides the cross-session global REST ratelimit it received through {@link #setGlobalRatelimit(long)}.
+     * The store for global rate-limits of all types.
+     * <br>This can be used to share the global rate-limit information between shards on the same IP.
      *
-     * @return The current global REST ratelimit or -1 if unset
+     * @return The global rate-limiter
      */
-    long getGlobalRatelimit();
-
-    /**
-     * Called by the RateLimiter if the global rest ratelimit has changed.
-     *
-     * @param ratelimit
-     *        The new global ratelimit
-     */
-    void setGlobalRatelimit(long ratelimit);
+    @Nonnull
+    default RestRateLimiter.GlobalRateLimit getRateLimitHandle()
+    {
+        return RestRateLimiter.GlobalRateLimit.create();
+    }
 
     /**
      * Discord's gateway URL, which is used to receive events.
      *
-     * Called by JDA when starting a new gateway session (Connecting, Reconnecting).
+     * <p>Called by JDA when starting a new gateway session (Connecting, Reconnecting).
      *
      * @return The gateway endpoint
      */

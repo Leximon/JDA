@@ -20,15 +20,13 @@ import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageReaction;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
-import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.exceptions.ParsingException;
 import net.dv8tion.jda.api.requests.Request;
 import net.dv8tion.jda.api.requests.Response;
+import net.dv8tion.jda.api.requests.Route;
 import net.dv8tion.jda.api.requests.restaction.pagination.ReactionPaginationAction;
 import net.dv8tion.jda.api.utils.data.DataArray;
 import net.dv8tion.jda.internal.entities.EntityBuilder;
-import net.dv8tion.jda.internal.requests.Route;
-import net.dv8tion.jda.internal.utils.EncodingUtil;
 
 import javax.annotation.Nonnull;
 import java.util.EnumSet;
@@ -49,14 +47,14 @@ public class ReactionPaginationActionImpl
      */
     public ReactionPaginationActionImpl(MessageReaction reaction)
     {
-        super(reaction.getJDA(), Route.Messages.GET_REACTION_USERS.compile(reaction.getChannel().getId(), reaction.getMessageId(), getCode(reaction)), 1, 100, 100);
+        super(reaction.getJDA(), Route.Messages.GET_REACTION_USERS.compile(reaction.getChannelId(), reaction.getMessageId(), getCode(reaction)), 1, 100, 100);
         super.order(PaginationOrder.FORWARD);
         this.reaction = reaction;
     }
 
     public ReactionPaginationActionImpl(Message message, String code)
     {
-        super(message.getJDA(), Route.Messages.GET_REACTION_USERS.compile(message.getChannel().getId(), message.getId(), code), 1, 100, 100);
+        super(message.getJDA(), Route.Messages.GET_REACTION_USERS.compile(message.getChannelId(), message.getId(), code), 1, 100, 100);
         super.order(PaginationOrder.FORWARD);
         this.reaction = null;
     }
@@ -70,8 +68,7 @@ public class ReactionPaginationActionImpl
 
     protected static String getCode(MessageReaction reaction)
     {
-        Emoji emoji = reaction.getEmoji();
-        return EncodingUtil.encodeUTF8(emoji.getAsReactionCode());
+        return reaction.getEmoji().getAsReactionCode();
     }
 
     @Nonnull

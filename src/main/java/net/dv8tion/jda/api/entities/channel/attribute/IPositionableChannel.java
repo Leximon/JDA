@@ -24,18 +24,15 @@ import javax.annotation.Nonnull;
 /**
  * Represents a {@link GuildChannel GuildChannel} that has a position.
  *
- * These channels can be re-ordered using a position value.
+ * <p>These channels can be re-ordered using a position value.
  *
- * In the case of identical position values, the natural order of the channel snowflakes is used.
+ * <p>In the case of identical position values, the natural order of the channel snowflakes is used.
  */
 public interface IPositionableChannel extends GuildChannel
 {
-    //TODO-v5: Docs
     @Override
     @Nonnull
     IPositionableChannelManager<?, ?> getManager();
-
-    //TODO-v5: We should probably introduce getPositionInCategory (name pending) that returns index in Category#getChannels or -1
 
     /**
      * The position of this channel in the channel list of the guild.

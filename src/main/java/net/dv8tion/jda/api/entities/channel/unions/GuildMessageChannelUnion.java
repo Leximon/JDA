@@ -18,10 +18,8 @@ package net.dv8tion.jda.api.entities.channel.unions;
 
 import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.attribute.IThreadContainer;
-import net.dv8tion.jda.api.entities.channel.concrete.NewsChannel;
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
-import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
-import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
+import net.dv8tion.jda.api.entities.channel.concrete.*;
+import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.StandardGuildChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.StandardGuildMessageChannel;
@@ -38,6 +36,7 @@ import javax.annotation.Nonnull;
  *     <li>{@link TextChannel}</li>
  *     <li>{@link NewsChannel}</li>
  *     <li>{@link VoiceChannel}</li>
+ *     <li>{@link StageChannel}</li>
  *     <li>{@link ThreadChannel}</li>
  * </ul>
  */
@@ -47,7 +46,7 @@ public interface GuildMessageChannelUnion extends GuildMessageChannel
      * Casts this union to a {@link TextChannel}.
      * This method exists for developer discoverability.
      *
-     * Note: This is effectively equivalent to using the cast operator:
+     * <p>Note: This is effectively equivalent to using the cast operator:
      * <pre><code>
      * //These are the same!
      * TextChannel channel = union.asTextChannel();
@@ -69,7 +68,7 @@ public interface GuildMessageChannelUnion extends GuildMessageChannel
      * Casts this union to a {@link NewsChannel}.
      * This method exists for developer discoverability.
      *
-     * Note: This is effectively equivalent to using the cast operator:
+     * <p>Note: This is effectively equivalent to using the cast operator:
      * <pre><code>
      * //These are the same!
      * NewsChannel channel = union.asNewsChannel();
@@ -91,7 +90,7 @@ public interface GuildMessageChannelUnion extends GuildMessageChannel
      * Casts this union to a {@link ThreadChannel}.
      * This method exists for developer discoverability.
      *
-     * Note: This is effectively equivalent to using the cast operator:
+     * <p>Note: This is effectively equivalent to using the cast operator:
      * <pre><code>
      * //These are the same!
      * ThreadChannel channel = union.asThreadChannel();
@@ -113,7 +112,7 @@ public interface GuildMessageChannelUnion extends GuildMessageChannel
      * Casts this union to a {@link VoiceChannel}.
      * This method exists for developer discoverability.
      *
-     * Note: This is effectively equivalent to using the cast operator:
+     * <p>Note: This is effectively equivalent to using the cast operator:
      * <pre><code>
      * //These are the same!
      * VoiceChannel channel = union.asVoiceChannel();
@@ -132,10 +131,32 @@ public interface GuildMessageChannelUnion extends GuildMessageChannel
     VoiceChannel asVoiceChannel();
 
     /**
+     * Casts this union to a {@link StageChannel}.
+     * This method exists for developer discoverability.
+     *
+     * <p>Note: This is effectively equivalent to using the cast operator:
+     * <pre><code>
+     * //These are the same!
+     * StageChannel channel = union.asStageChannel();
+     * StageChannel channel2 = (StageChannel) union;
+     * </code></pre>
+     *
+     * You can use {@link #getType()} to see if the channel is of type {@link ChannelType#STAGE} to validate
+     * whether you can call this method in addition to normal instanceof checks: <code>channel instanceof StageChannel</code>
+     *
+     * @throws IllegalStateException
+     *         If the channel represented by this union is not actually a {@link StageChannel}.
+     *
+     * @return The channel as a {@link StageChannel}
+     */
+    @Nonnull
+    StageChannel asStageChannel();
+
+    /**
      * Casts this union to a {@link net.dv8tion.jda.api.entities.channel.attribute.IThreadContainer}.
      * This method exists for developer discoverability.
      *
-     * Note: This is effectively equivalent to using the cast operator:
+     * <p>Note: This is effectively equivalent to using the cast operator:
      * <pre><code>
      * //These are the same!
      * IThreadContainer channel = union.asThreadContainer();
@@ -149,12 +170,13 @@ public interface GuildMessageChannelUnion extends GuildMessageChannel
      *
      * @return The channel as a {@link net.dv8tion.jda.api.entities.channel.attribute.IThreadContainer}
      */
+    @Nonnull
     IThreadContainer asThreadContainer();
 
     /**
      * Casts this union to a {@link StandardGuildChannel}.you can call this method
      *
-     * Note: This is effectively equivalent to using the cast operator:
+     * <p>Note: This is effectively equivalent to using the cast operator:
      * <pre><code>
      * //These are the same!
      * StandardGuildChannel channel = union.asStandardGuildChannel();
@@ -173,7 +195,7 @@ public interface GuildMessageChannelUnion extends GuildMessageChannel
      * Casts this union to a {@link StandardGuildMessageChannel}.
      * This method exists for developer discoverability.
      *
-     * Note: This is effectively equivalent to using the cast operator:
+     * <p>Note: This is effectively equivalent to using the cast operator:
      * <pre><code>
      * //These are the same!
      * StandardGuildMessageChannel channel = union.asStandardGuildMessageChannel();
@@ -187,4 +209,25 @@ public interface GuildMessageChannelUnion extends GuildMessageChannel
      */
     @Nonnull
     StandardGuildMessageChannel asStandardGuildMessageChannel();
+
+    /**
+     * Casts this union to a {@link AudioChannel}.
+     * This method exists for developer discoverability.
+     *
+     * <p>Note: This is effectively equivalent to using the cast operator:
+     * <pre><code>
+     * //These are the same!
+     * AudioChannel channel = union.asAudioChannel();
+     * AudioChannel channel2 = (AudioChannel) union;
+     * </code></pre>
+     *
+     * You can use <code>channel instanceof AudioChannel</code> to validate whether you can call this method.
+     *
+     * @throws IllegalStateException
+     *         If the channel represented by this union is not actually a {@link AudioChannel}.
+     *
+     * @return The channel as a {@link AudioChannel}
+     */
+    @Nonnull
+    AudioChannel asAudioChannel();
 }

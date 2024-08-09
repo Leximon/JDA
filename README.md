@@ -21,12 +21,12 @@
 [ ![jenkins-shield][] ][jenkins]
 [ ![license-shield][] ][license]
 
-[ ![discord-shield][] ][discord-invite]
-[ ![faq-shield] ][faq]
-[ ![troubleshooting-shield] ][troubleshooting]
+[![discord-shield][]][discord-invite]
+[![faq-shield]][faq]
+[![docs-shield]][docs]
+[![troubleshooting-shield] ][troubleshooting]
 [ ![migration-shield][] ][migration]
 # A slightly modified version of the JDA for the Telephone Bot
-
 # JDA (Java Discord API)
 
 JDA strives to provide a clean and full wrapping of the Discord REST api and its Websocket-Events for Java.

@@ -48,7 +48,6 @@ import javax.annotation.Nullable;
  */
 public interface AudioChannel extends StandardGuildChannel
 {
-    //TODO-v5: Docs
     @Override
     @Nonnull
     AudioChannelManager<?, ?> getManager();
@@ -61,6 +60,16 @@ public interface AudioChannel extends StandardGuildChannel
      * @return The audio bitrate of this audio channel.
      */
     int getBitrate();
+
+    /**
+     * The maximum amount of {@link net.dv8tion.jda.api.entities.Member Members} that be in an audio connection within this channel concurrently.
+     * <br>Returns 0 if there is no limit.
+     *
+     * <p>Moderators with the {@link net.dv8tion.jda.api.Permission#VOICE_MOVE_OTHERS VOICE_MOVE_OTHERS} permission can bypass this limit.
+     *
+     * @return The maximum connections allowed in this channel concurrently
+     */
+    int getUserLimit();
 
     /**
      * The {@link Region} of this channel.

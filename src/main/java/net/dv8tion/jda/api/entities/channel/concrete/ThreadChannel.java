@@ -33,6 +33,7 @@ import net.dv8tion.jda.api.requests.restaction.CacheRestAction;
 import net.dv8tion.jda.api.requests.restaction.pagination.ThreadMemberPaginationAction;
 import net.dv8tion.jda.api.utils.MiscUtil;
 import net.dv8tion.jda.internal.utils.Checks;
+import org.jetbrains.annotations.Unmodifiable;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -44,6 +45,8 @@ import java.util.List;
 
 /**
  * Represents Discord Message Threads of all kinds.
+ * <br>These are also referred to as "posts" in the context of {@link ForumChannel Forum Channels}.
+ *
  * <p>This includes all thread channel types, namely:
  * <ul>
  *     <li>{@link ChannelType#GUILD_PUBLIC_THREAD}</li>
@@ -182,10 +185,12 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
      * @return Immutable {@link List} of {@link net.dv8tion.jda.api.entities.channel.forums.ForumTag ForumTags} applied to this post
      */
     @Nonnull
+    @Unmodifiable
     List<ForumTag> getAppliedTags();
 
     /**
-     * Attempts to get the {@link net.dv8tion.jda.api.entities.Message Message} from Discord's servers that started this thread.
+     * Attempts to get the {@link net.dv8tion.jda.api.entities.Message Message} that this thread was started from.
+     * <br>The parent message was posted in the {@link #getParentChannel() parent channel} and a thread was started on it.
      *
      * <p>The {@link Message#getMember() Message.getMember()} method will always return null for the resulting message.
      * To retrieve the member you can use {@code getGuild().retrieveMember(message.getAuthor())}.
@@ -208,8 +213,6 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
      *     <br>The request was attempted after the parent channel was deleted.</li>
      * </ul>
      *
-     * @throws net.dv8tion.jda.api.exceptions.AccountTypeException
-     *         If the currently logged in account is not from {@link net.dv8tion.jda.api.AccountType#BOT AccountType.BOT}
      * @throws net.dv8tion.jda.api.exceptions.InsufficientPermissionException
      *         If this is a {@link GuildMessageChannel GuildMessageChannel} and the logged in account does not have
      *         <ul>
@@ -223,7 +226,49 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
      *         <br>The Message that started this thread
      */
     @Nonnull
+    @CheckReturnValue
     RestAction<Message> retrieveParentMessage();
+
+    /**
+     * Attempts to get the {@link net.dv8tion.jda.api.entities.Message Message} that was posted when this thread was created.
+     * <br>Unlike {@link #retrieveParentMessage()}, the message was posted only inside the thread channel.
+     * This is common for {@link ForumChannel} posts.
+     *
+     * <p>The {@link Message#getMember() Message.getMember()} method will always return null for the resulting message.
+     * To retrieve the member you can use {@code getGuild().retrieveMember(message.getAuthor())}.
+     *
+     * <p>This is equivalent to {@code channel.retrieveMessageById(channel.getId())}.
+     *
+     * <p>The following {@link net.dv8tion.jda.api.requests.ErrorResponse ErrorResponses} are possible:
+     * <ul>
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MISSING_ACCESS MISSING_ACCESS}
+     *     <br>The request was attempted after the account lost access to the {@link net.dv8tion.jda.api.entities.Guild Guild}
+     *         typically due to being kicked or removed, or after {@link net.dv8tion.jda.api.Permission#VIEW_CHANNEL Permission.VIEW_CHANNEL}
+     *         was revoked in the {@link GuildMessageChannel GuildMessageChannel}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MISSING_PERMISSIONS MISSING_PERMISSIONS}
+     *     <br>The request was attempted after the account lost {@link net.dv8tion.jda.api.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}
+     *         in the {@link GuildMessageChannel GuildMessageChannel}.</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#UNKNOWN_MESSAGE UNKNOWN_MESSAGE}
+     *     <br>The message has already been deleted or there was no starting message.</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#UNKNOWN_CHANNEL UNKNOWN_CHANNEL}
+     *     <br>The request was attempted after the parent channel was deleted.</li>
+     * </ul>
+     *
+     * @throws net.dv8tion.jda.api.exceptions.InsufficientPermissionException
+     *         If this is a {@link GuildMessageChannel GuildMessageChannel} and the logged in account does not have
+     *         <ul>
+     *             <li>{@link net.dv8tion.jda.api.Permission#VIEW_CHANNEL Permission.VIEW_CHANNEL}</li>
+     *             <li>{@link net.dv8tion.jda.api.Permission#MESSAGE_HISTORY Permission.MESSAGE_HISTORY}</li>
+     *         </ul>
+     *
+     * @return {@link net.dv8tion.jda.api.requests.RestAction RestAction} - Type: Message
+     */
+    @Nonnull
+    @CheckReturnValue
+    RestAction<Message> retrieveStartMessage();
 
     /**
      * Gets the self member, as a member of this thread.
@@ -591,7 +636,7 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
      * </ul>
      *
      * @throws IllegalStateException
-     *         If this thread is locked or archived.
+     *         If this thread is archived.
      *
      * @return {@link RestAction}
      */
@@ -614,7 +659,7 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
      * </ul>
      *
      * @throws IllegalStateException
-     *         If this thread is locked or archived.
+     *         If this thread is archived.
      *
      * @return {@link RestAction}
      */
@@ -622,8 +667,6 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
     @CheckReturnValue
     RestAction<Void> leave();
 
-    //TODO-v5: re-document this method as permission checks are included in the impl.
-    //this is probably also affected by private threads that are not invitable
     /**
      * Adds a member to this thread.
      * <br>This will have no effect if the member is already a member of this thread.
@@ -654,8 +697,14 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
      * @param  id
      *         The id of the member to add.
      *
+     * @throws net.dv8tion.jda.api.exceptions.InsufficientPermissionException
+     *         <ul>
+     *             <li>If this is a {@link #isPublic() private thread} or not {@link #isInvitable()},
+     *                 and the bot does not have {@link net.dv8tion.jda.api.Permission#MANAGE_THREADS MANAGE_THREADS} permission and is not the {@link #getOwner()}.</li>
+     *             <li>If the bot does not have {@link net.dv8tion.jda.api.Permission#MESSAGE_SEND_IN_THREADS MESSAGE_SEND_IN_THREADS} permission in the parent channel.</li>
+     *         </ul>
      * @throws IllegalStateException
-     *         If this thread is locked or archived.
+     *         If this thread is archived.
      *
      * @return {@link RestAction}
      */
@@ -693,6 +742,12 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
      * @param  id
      *         The id of the member to add.
      *
+     * @throws net.dv8tion.jda.api.exceptions.InsufficientPermissionException
+     *         <ul>
+     *             <li>If this is a {@link #isPublic() private thread} or not {@link #isInvitable()},
+     *                 and the bot does not have {@link net.dv8tion.jda.api.Permission#MANAGE_THREADS MANAGE_THREADS} permission and is not the {@link #getOwner()}.</li>
+     *             <li>If the bot does not have {@link net.dv8tion.jda.api.Permission#MESSAGE_SEND_IN_THREADS MESSAGE_SEND_IN_THREADS} permission in the parent channel.</li>
+     *         </ul>
      * @throws IllegalStateException
      *         If this thread is locked or archived
      * @throws IllegalArgumentException
@@ -730,6 +785,12 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
      * @param  user
      *         The {@link User} to add.
      *
+     * @throws net.dv8tion.jda.api.exceptions.InsufficientPermissionException
+     *         <ul>
+     *             <li>If this is a {@link #isPublic() private thread} or not {@link #isInvitable()},
+     *                 and the bot does not have {@link net.dv8tion.jda.api.Permission#MANAGE_THREADS MANAGE_THREADS} permission and is not the {@link #getOwner()}.</li>
+     *             <li>If the bot does not have {@link net.dv8tion.jda.api.Permission#MESSAGE_SEND_IN_THREADS MESSAGE_SEND_IN_THREADS} permission in the parent channel.</li>
+     *         </ul>
      * @throws IllegalStateException
      *         If this thread is locked or archived.
      * @throws IllegalArgumentException
@@ -768,6 +829,12 @@ public interface ThreadChannel extends GuildMessageChannel, IMemberContainer, IS
      * @param  member
      *         The {@link Member} to add.
      *
+     * @throws net.dv8tion.jda.api.exceptions.InsufficientPermissionException
+     *         <ul>
+     *             <li>If this is a {@link #isPublic() private thread} or not {@link #isInvitable()},
+     *                 and the bot does not have {@link net.dv8tion.jda.api.Permission#MANAGE_THREADS MANAGE_THREADS} permission and is not the {@link #getOwner()}.</li>
+     *             <li>If the bot does not have {@link net.dv8tion.jda.api.Permission#MESSAGE_SEND_IN_THREADS MESSAGE_SEND_IN_THREADS} permission in the parent channel.</li>
+     *         </ul>
      * @throws IllegalStateException
      *         If this thread is locked or archived.
      * @throws IllegalArgumentException

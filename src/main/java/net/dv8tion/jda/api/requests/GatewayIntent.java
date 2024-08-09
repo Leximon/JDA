@@ -16,12 +16,11 @@
 
 package net.dv8tion.jda.api.requests;
 
-import net.dv8tion.jda.annotations.DeprecatedSince;
-import net.dv8tion.jda.annotations.ForRemoval;
-import net.dv8tion.jda.annotations.ReplaceWith;
 import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.events.GenericEvent;
+import net.dv8tion.jda.api.events.automod.AutoModExecutionEvent;
+import net.dv8tion.jda.api.events.automod.GenericAutoModRuleEvent;
 import net.dv8tion.jda.api.events.emoji.GenericEmojiEvent;
 import net.dv8tion.jda.api.events.guild.GuildAuditLogEntryCreateEvent;
 import net.dv8tion.jda.api.events.guild.GuildBanEvent;
@@ -67,6 +66,10 @@ import java.util.EnumSet;
  *     <li><b>DIRECT_MESSAGES</b> - This is used to receive incoming messages in private channels (DMs). You can still send private messages without this intent.</li>
  *     <li><b>DIRECT_MESSAGE_REACTIONS</b> - This is used to track reactions on messages in private channels (DMs).</li>
  *     <li><b>DIRECT_MESSAGE_TYPING</b> - This is used to track when a user starts typing in private channels (DMs). Almost no bot will have a use for this.</li>
+ *     <li><b>MESSAGE_CONTENT</b> - This is a <b>privileged</b> gateway intent this is only used to enable access to the user content in messages (also including embeds/attachments/components).</li>
+ *     <li><b>SCHEDULED_EVENTS</b> - This is used to keep track of scheduled events in guilds.</li>
+ *     <li><b>AUTO_MODERATION_CONFIGURATION</b> - This is used to keep track of auto-mod rule changes in guilds.</li>
+ *     <li><b>AUTO_MODERATION_EXECUTION</b> - This is used to receive events related to auto-mod response actions.</li>
  * </ol>
  *
  * If an intent is not specifically mentioned to be <b>privileged</b>, it is not required to be on the whitelist to use it (and its related events).
@@ -91,14 +94,6 @@ public enum GatewayIntent
      * <p>This will also update user information such as name/avatar.
      */
     GUILD_MEMBERS(1),
-    /**
-     * Ban events.
-     */
-    @Deprecated
-    @ForRemoval
-    @DeprecatedSince("5.0.0-beta.4")
-    @ReplaceWith("GUILD_MODERATION")
-    GUILD_BANS(2),
     /**
      * Moderation events, such as ban/unban/audit-log.
      */
@@ -177,7 +172,27 @@ public enum GatewayIntent
      * Scheduled Events events.
      */
     SCHEDULED_EVENTS(16),
-    
+
+    /**
+     * Events related to {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule} changes.
+     */
+    AUTO_MODERATION_CONFIGURATION(20),
+
+    /**
+     * Events related to {@link net.dv8tion.jda.api.entities.automod.AutoModResponse AutoModResponse} triggers.
+     */
+    AUTO_MODERATION_EXECUTION(21),
+
+    /**
+     * Events for poll votes in {@link net.dv8tion.jda.api.entities.Guild Guilds}.
+     */
+    GUILD_MESSAGE_POLLS(24),
+
+    /**
+     * Events for poll votes in {@link net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel PrivateChannels}.
+     */
+    DIRECT_MESSAGE_POLLS(25),
+
     ;
 
     /**
@@ -411,6 +426,11 @@ public enum GatewayIntent
 
             else if (UserTypingEvent.class.isAssignableFrom(event))
                 Collections.addAll(intents, GUILD_MESSAGE_TYPING, DIRECT_MESSAGE_TYPING);
+
+            else if (AutoModExecutionEvent.class.isAssignableFrom(event))
+                intents.add(AUTO_MODERATION_EXECUTION);
+            else if (GenericAutoModRuleEvent.class.isAssignableFrom(event))
+                intents.add(AUTO_MODERATION_CONFIGURATION);
         }
         return intents;
     }

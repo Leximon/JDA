@@ -43,6 +43,7 @@ public enum DiscordLocale
     GREEK               ("el",      "Greek",                 "Ελληνικά"),
     HINDI               ("hi",      "Hindi",                 "हिन्दी"),
     HUNGARIAN           ("hu",      "Hungarian",             "Magyar"),
+    INDONESIAN          ("id",      "Indonesian",            "Bahasa Indonesia"),
     ITALIAN             ("it",      "Italian",               "Italiano"),
     JAPANESE            ("ja",      "Japanese",              "日本語"),
     KOREAN              ("ko",      "Korean",                "한국어"),
@@ -53,6 +54,7 @@ public enum DiscordLocale
     ROMANIAN_ROMANIA    ("ro",      "Romanian, Romania",     "Română"),
     RUSSIAN             ("ru",      "Russian",               "Pусский"),
     SPANISH             ("es-ES",   "Spanish",               "Español"),
+    SPANISH_LATAM       ("es-419",  "Spanish, LATAM",        "Español, LATAM"),
     SWEDISH             ("sv-SE",   "Swedish",               "Svenska"),
     THAI                ("th",      "Thai",                  "ไทย"),
     TURKISH             ("tr",      "Turkish",               "Türkçe"),
@@ -81,6 +83,24 @@ public enum DiscordLocale
     public String getLocale()
     {
         return locale;
+    }
+
+    /**
+     * Creates a {@link Locale} from this DiscordLocale.
+     * <br>This is a simple shortcut to {@link Locale#forLanguageTag(String) Locale.forLanguageTag(getLocale())}.
+     *
+     * <p><b>Note:</b> The returned {@link Locale} might not be the same locale
+     * as the one passed in {@link #from(Locale) DiscordLocale#from(Locale)}.
+     * See {@link Locale#forLanguageTag(String)} for more details.
+     *
+     * @return the {@link Locale} from this DiscordLocale
+     *
+     * @see    Locale#forLanguageTag(String)
+     */
+    @Nonnull
+    public Locale toLocale()
+    {
+        return Locale.forLanguageTag(getLocale());
     }
 
     /**

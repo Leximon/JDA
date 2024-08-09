@@ -19,12 +19,13 @@ import com.neovisionaries.ws.client.WebSocketFactory;
 import net.dv8tion.jda.api.audio.factory.IAudioSendFactory;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.events.Event;
-import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.events.session.ReadyEvent;
+import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.hooks.IEventManager;
 import net.dv8tion.jda.api.hooks.VoiceDispatchInterceptor;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.requests.RestAction;
+import net.dv8tion.jda.api.requests.RestConfig;
 import net.dv8tion.jda.api.utils.*;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import net.dv8tion.jda.internal.JDAImpl;
@@ -60,8 +61,10 @@ public class JDABuilder
     protected final List<Object> listeners = new LinkedList<>();
     protected final EnumSet<CacheFlag> automaticallyDisabled = EnumSet.noneOf(CacheFlag.class);
 
-    protected ScheduledExecutorService rateLimitPool = null;
-    protected boolean shutdownRateLimitPool = true;
+    protected ScheduledExecutorService rateLimitScheduler = null;
+    protected boolean shutdownRateLimitScheduler = true;
+    protected ExecutorService rateLimitElastic = null;
+    protected boolean shutdownRateLimitElastic = true;
     protected ScheduledExecutorService mainWsPool = null;
     protected boolean shutdownMainWsPool = true;
     protected ExecutorService callbackPool = null;
@@ -93,6 +96,7 @@ public class JDABuilder
     protected ChunkingFilter chunkingFilter = ChunkingFilter.ALL;
     protected MemberCachePolicy memberCachePolicy = MemberCachePolicy.ALL;
     protected GatewayEncoding encoding = GatewayEncoding.JSON;
+    protected RestConfig restConfig = new RestConfig();
 
     private JDABuilder(@Nullable String token, int intents)
     {
@@ -542,28 +546,23 @@ public class JDABuilder
     }
 
     /**
-     * Whether the rate-limit should be relative to the current time plus latency.
-     * <br>By default we use the {@code X-RateLimit-Reset-After} header to determine when
-     * a rate-limit is no longer imminent. This has the disadvantage that it might wait longer than needed due
-     * to the latency which is ignored by the reset-after relative delay.
+     * Custom {@link RestConfig} to use for this JDA instance.
+     * <br>This can be used to customize how rate-limits are handled and configure a custom http proxy.
      *
-     * <p>When disabled, we will use the {@code X-RateLimit-Reset} absolute timestamp instead which accounts for
-     * latency but requires a properly NTP synchronized clock to be present.
-     * If your system does have this feature you might gain a little quicker rate-limit handling than the default allows.
+     * @param  config
+     *         The {@link RestConfig} to use
      *
-     * <p>Default: <b>true</b>
-     *
-     * @param  enable
-     *         True, if the relative {@code X-RateLimit-Reset-After} header should be used.
+     * @throws IllegalArgumentException
+     *         If null is provided
      *
      * @return The JDABuilder instance. Useful for chaining.
-     *
-     * @since  4.1.0
      */
     @Nonnull
-    public JDABuilder setRelativeRateLimit(boolean enable)
+    public JDABuilder setRestConfig(@Nonnull RestConfig config)
     {
-        return setFlag(ConfigFlag.USE_RELATIVE_RATELIMIT, enable);
+        Checks.notNull(config, "RestConfig");
+        this.restConfig = config;
+        return this;
     }
 
     /**
@@ -803,7 +802,7 @@ public class JDABuilder
      * Sets the token that will be used by the {@link net.dv8tion.jda.api.JDA} instance to log in when
      * {@link net.dv8tion.jda.api.JDABuilder#build() build()} is called.
      *
-     * <p><b>For {@link net.dv8tion.jda.api.AccountType#BOT}</b><br>
+     * <p>To get a bot token:<br>
      * <ol>
      *     <li>Go to your <a href="https://discord.com/developers/applications/me">Discord Applications</a></li>
      *     <li>Create or select an already existing application</li>
@@ -876,13 +875,13 @@ public class JDABuilder
      * the JDA rate-limit handler. Changing this can drastically change the JDA behavior for RestAction execution
      * and should be handled carefully. <b>Only change this pool if you know what you're doing.</b>
      * <br><b>This automatically disables the automatic shutdown of the rate-limit pool, you can enable
-     * it using {@link #setRateLimitPool(ScheduledExecutorService, boolean) setRateLimitPool(executor, true)}</b>
+     * it using {@link #setRateLimitScheduler(ScheduledExecutorService, boolean) setRateLimitScheduler(executor, true)}</b>
      *
      * <p>This is used mostly by the Rate-Limiter to handle backoff delays by using scheduled executions.
      * Besides that it is also used by planned execution for {@link net.dv8tion.jda.api.requests.RestAction#queueAfter(long, TimeUnit)}
-     * and similar methods.
+     * and similar methods. Requests are handed off to the {@link #setRateLimitElastic(ExecutorService) elastic pool} for blocking execution.
      *
-     * <p>Default: {@link ScheduledThreadPoolExecutor} with 5 threads.
+     * <p>Default: {@link ScheduledThreadPoolExecutor} with 2 threads.
      *
      * @param  pool
      *         The thread-pool to use for rate-limit handling
@@ -890,9 +889,9 @@ public class JDABuilder
      * @return The JDABuilder instance. Useful for chaining.
      */
     @Nonnull
-    public JDABuilder setRateLimitPool(@Nullable ScheduledExecutorService pool)
+    public JDABuilder setRateLimitScheduler(@Nullable ScheduledExecutorService pool)
     {
-        return setRateLimitPool(pool, pool == null);
+        return setRateLimitScheduler(pool, pool == null);
     }
 
     /**
@@ -902,9 +901,9 @@ public class JDABuilder
      *
      * <p>This is used mostly by the Rate-Limiter to handle backoff delays by using scheduled executions.
      * Besides that it is also used by planned execution for {@link net.dv8tion.jda.api.requests.RestAction#queueAfter(long, TimeUnit)}
-     * and similar methods.
+     * and similar methods. Requests are handed off to the {@link #setRateLimitElastic(ExecutorService) elastic pool} for blocking execution.
      *
-     * <p>Default: {@link ScheduledThreadPoolExecutor} with 5 threads.
+     * <p>Default: {@link ScheduledThreadPoolExecutor} with 2 threads.
      *
      * @param  pool
      *         The thread-pool to use for rate-limit handling
@@ -914,10 +913,56 @@ public class JDABuilder
      * @return The JDABuilder instance. Useful for chaining.
      */
     @Nonnull
-    public JDABuilder setRateLimitPool(@Nullable ScheduledExecutorService pool, boolean automaticShutdown)
+    public JDABuilder setRateLimitScheduler(@Nullable ScheduledExecutorService pool, boolean automaticShutdown)
     {
-        this.rateLimitPool = pool;
-        this.shutdownRateLimitPool = automaticShutdown;
+        this.rateLimitScheduler = pool;
+        this.shutdownRateLimitScheduler = automaticShutdown;
+        return this;
+    }
+
+    /**
+     * Sets the {@link ExecutorService ExecutorService} that should be used in
+     * the JDA request handler. Changing this can drastically change the JDA behavior for RestAction execution
+     * and should be handled carefully. <b>Only change this pool if you know what you're doing.</b>
+     * <br><b>This automatically disables the automatic shutdown of the rate-limit elastic pool, you can enable
+     * it using {@link #setRateLimitElastic(ExecutorService, boolean) setRateLimitElastic(executor, true)}</b>
+     *
+     * <p>This is used mostly by the Rate-Limiter to execute the blocking HTTP requests at runtime.
+     *
+     * <p>Default: {@link Executors#newCachedThreadPool()}.
+     *
+     * @param  pool
+     *         The thread-pool to use for executing http requests
+     *
+     * @return The JDABuilder instance. Useful for chaining.
+     */
+    @Nonnull
+    public JDABuilder setRateLimitElastic(@Nullable ExecutorService pool)
+    {
+        return setRateLimitElastic(pool, pool == null);
+    }
+
+    /**
+     * Sets the {@link ExecutorService ExecutorService} that should be used in
+     * the JDA request handler. Changing this can drastically change the JDA behavior for RestAction execution
+     * and should be handled carefully. <b>Only change this pool if you know what you're doing.</b>
+     *
+     * <p>This is used mostly by the Rate-Limiter to execute the blocking HTTP requests at runtime.
+     *
+     * <p>Default: {@link Executors#newCachedThreadPool()}.
+     *
+     * @param  pool
+     *         The thread-pool to use for executing http requests
+     * @param  automaticShutdown
+     *         Whether {@link JDA#shutdown()} should shutdown this pool
+     *
+     * @return The JDABuilder instance. Useful for chaining.
+     */
+    @Nonnull
+    public JDABuilder setRateLimitElastic(@Nullable ExecutorService pool, boolean automaticShutdown)
+    {
+        this.rateLimitElastic = pool;
+        this.shutdownRateLimitElastic = automaticShutdown;
         return this;
     }
 
@@ -1162,7 +1207,7 @@ public class JDABuilder
      * Sets whether or not JDA should try to reconnect if a connection-error is encountered.
      * <br>This will use an incremental reconnect (timeouts are increased each time an attempt fails).
      *
-     * Default: <b>true (enabled)</b>
+     * <p>Default: <b>true (enabled)</b>
      *
      * @param  autoReconnect
      *         If true - enables autoReconnect
@@ -1772,13 +1817,14 @@ public class JDABuilder
         ThreadingConfig threadingConfig = new ThreadingConfig();
         threadingConfig.setCallbackPool(callbackPool, shutdownCallbackPool);
         threadingConfig.setGatewayPool(mainWsPool, shutdownMainWsPool);
-        threadingConfig.setRateLimitPool(rateLimitPool, shutdownRateLimitPool);
+        threadingConfig.setRateLimitScheduler(rateLimitScheduler, shutdownRateLimitScheduler);
+        threadingConfig.setRateLimitElastic(rateLimitElastic, shutdownRateLimitElastic);
         threadingConfig.setEventPool(eventPool, shutdownEventPool);
         threadingConfig.setAudioPool(audioPool, shutdownAudioPool);
         SessionConfig sessionConfig = new SessionConfig(controller, httpClient, wsFactory, voiceDispatchInterceptor, flags, maxReconnectDelay, largeThreshold);
         MetaConfig metaConfig = new MetaConfig(maxBufferSize, contextMap, cacheFlags, flags);
 
-        JDAImpl jda = new JDAImpl(authConfig, sessionConfig, threadingConfig, metaConfig);
+        JDAImpl jda = new JDAImpl(authConfig, sessionConfig, threadingConfig, metaConfig, restConfig);
         jda.setMemberCachePolicy(memberCachePolicy);
         // We can only do member chunking with the GUILD_MEMBERS intent
         if ((intents & GatewayIntent.GUILD_MEMBERS.getRawValue()) == 0)
@@ -1792,7 +1838,7 @@ public class JDABuilder
         if (audioSendFactory != null)
             jda.setAudioSendFactory(audioSendFactory);
 
-        listeners.forEach(jda::addEventListener);
+        jda.addEventListener(listeners.toArray());
         jda.setStatus(JDA.Status.INITIALIZED);  //This is already set by JDA internally, but this is to make sure the listeners catch it.
 
         // Set the presence information before connecting to have the correct information ready when sending IDENTIFY

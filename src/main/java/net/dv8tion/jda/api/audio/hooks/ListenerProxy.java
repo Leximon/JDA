@@ -18,12 +18,16 @@ package net.dv8tion.jda.api.audio.hooks;
 
 import net.dv8tion.jda.api.audio.SpeakingMode;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.UserSnowflake;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nonnull;
 import java.util.EnumSet;
 
+/**
+ * Internal implementation of {@link ConnectionListener}, to handle possible exceptions thrown by user code.
+ */
 public class ListenerProxy implements ConnectionListener
 {
     private static final Logger log = LoggerFactory.getLogger(ListenerProxy.class);
@@ -68,7 +72,7 @@ public class ListenerProxy implements ConnectionListener
     }
 
     @Override
-    public void onUserSpeaking(@Nonnull User user, @Nonnull EnumSet<SpeakingMode> modes)
+    public void onUserSpeakingModeUpdate(@Nonnull UserSnowflake user, @Nonnull EnumSet<SpeakingMode> modes)
     {
         if (listener == null)
             return;
@@ -77,9 +81,9 @@ public class ListenerProxy implements ConnectionListener
         {
             if (listener != null)
             {
-                listener.onUserSpeaking(user, modes);
-                listener.onUserSpeaking(user, modes.contains(SpeakingMode.VOICE));
-                listener.onUserSpeaking(user, modes.contains(SpeakingMode.VOICE), modes.contains(SpeakingMode.SOUNDSHARE));
+                listener.onUserSpeakingModeUpdate(user, modes);
+                if (user instanceof User)
+                    listener.onUserSpeakingModeUpdate((User) user, modes);
             }
         }
         catch (Throwable t)
@@ -89,9 +93,6 @@ public class ListenerProxy implements ConnectionListener
                 throw (Error) t;
         }
     }
-
-    @Override
-    public void onUserSpeaking(@Nonnull User user, boolean speaking) {}
 
     public void setListener(ConnectionListener listener)
     {

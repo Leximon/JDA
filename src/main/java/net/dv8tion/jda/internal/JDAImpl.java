@@ -18,7 +18,6 @@ package net.dv8tion.jda.internal;
 
 import com.neovisionaries.ws.client.WebSocketFactory;
 import gnu.trove.set.TLongSet;
-import net.dv8tion.jda.api.AccountType;
 import net.dv8tion.jda.api.GatewayEncoding;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.Permission;
@@ -27,7 +26,9 @@ import net.dv8tion.jda.api.audio.factory.IAudioSendFactory;
 import net.dv8tion.jda.api.audio.hooks.ConnectionStatus;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.channel.Channel;
+import net.dv8tion.jda.api.entities.channel.ChannelType;
 import net.dv8tion.jda.api.entities.channel.concrete.*;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
 import net.dv8tion.jda.api.entities.sticker.StickerPack;
 import net.dv8tion.jda.api.entities.sticker.StickerSnowflake;
@@ -36,7 +37,6 @@ import net.dv8tion.jda.api.events.GatewayPingEvent;
 import net.dv8tion.jda.api.events.GenericEvent;
 import net.dv8tion.jda.api.events.StatusChangeEvent;
 import net.dv8tion.jda.api.events.session.ShutdownEvent;
-import net.dv8tion.jda.api.exceptions.AccountTypeException;
 import net.dv8tion.jda.api.exceptions.InvalidTokenException;
 import net.dv8tion.jda.api.exceptions.ParsingException;
 import net.dv8tion.jda.api.exceptions.RateLimitedException;
@@ -47,18 +47,14 @@ import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.managers.AudioManager;
 import net.dv8tion.jda.api.managers.Presence;
-import net.dv8tion.jda.api.requests.GatewayIntent;
-import net.dv8tion.jda.api.requests.Request;
-import net.dv8tion.jda.api.requests.Response;
-import net.dv8tion.jda.api.requests.RestAction;
-import net.dv8tion.jda.api.requests.restaction.CacheRestAction;
-import net.dv8tion.jda.api.requests.restaction.CommandCreateAction;
-import net.dv8tion.jda.api.requests.restaction.CommandEditAction;
-import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction;
+import net.dv8tion.jda.api.requests.*;
+import net.dv8tion.jda.api.requests.restaction.*;
+import net.dv8tion.jda.api.requests.restaction.pagination.EntitlementPaginationAction;
 import net.dv8tion.jda.api.sharding.ShardManager;
 import net.dv8tion.jda.api.utils.*;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import net.dv8tion.jda.api.utils.cache.CacheView;
+import net.dv8tion.jda.api.utils.cache.ChannelCacheView;
 import net.dv8tion.jda.api.utils.cache.SnowflakeCacheView;
 import net.dv8tion.jda.api.utils.data.DataArray;
 import net.dv8tion.jda.api.utils.data.DataObject;
@@ -73,13 +69,12 @@ import net.dv8tion.jda.internal.managers.AudioManagerImpl;
 import net.dv8tion.jda.internal.managers.DirectAudioControllerImpl;
 import net.dv8tion.jda.internal.managers.PresenceImpl;
 import net.dv8tion.jda.internal.requests.*;
-import net.dv8tion.jda.internal.requests.restaction.CommandCreateActionImpl;
-import net.dv8tion.jda.internal.requests.restaction.CommandEditActionImpl;
-import net.dv8tion.jda.internal.requests.restaction.CommandListUpdateActionImpl;
-import net.dv8tion.jda.internal.requests.restaction.GuildActionImpl;
+import net.dv8tion.jda.internal.requests.restaction.*;
+import net.dv8tion.jda.internal.requests.restaction.pagination.EntitlementPaginationActionImpl;
 import net.dv8tion.jda.internal.utils.Helpers;
 import net.dv8tion.jda.internal.utils.*;
 import net.dv8tion.jda.internal.utils.cache.AbstractCacheView;
+import net.dv8tion.jda.internal.utils.cache.ChannelCacheViewImpl;
 import net.dv8tion.jda.internal.utils.cache.SnowflakeCacheViewImpl;
 import net.dv8tion.jda.internal.utils.config.AuthorizationConfig;
 import net.dv8tion.jda.internal.utils.config.MetaConfig;
@@ -106,15 +101,8 @@ public class JDAImpl implements JDA
 
     protected final SnowflakeCacheViewImpl<User> userCache = new SnowflakeCacheViewImpl<>(User.class, User::getName);
     protected final SnowflakeCacheViewImpl<Guild> guildCache = new SnowflakeCacheViewImpl<>(Guild.class, Guild::getName);
-    protected final SnowflakeCacheViewImpl<Category> categories = new SnowflakeCacheViewImpl<>(Category.class, Channel::getName);
-    protected final SnowflakeCacheViewImpl<TextChannel> textChannelCache = new SnowflakeCacheViewImpl<>(TextChannel.class, Channel::getName);
-    protected final SnowflakeCacheViewImpl<NewsChannel> newsChannelCache = new SnowflakeCacheViewImpl<>(NewsChannel.class, Channel::getName);
-    protected final SnowflakeCacheViewImpl<VoiceChannel> voiceChannelCache = new SnowflakeCacheViewImpl<>(VoiceChannel.class, Channel::getName);
-    protected final SnowflakeCacheViewImpl<StageChannel> stageChannelCache = new SnowflakeCacheViewImpl<>(StageChannel.class, Channel::getName);
-    protected final SnowflakeCacheViewImpl<ThreadChannel> threadChannelsCache = new SnowflakeCacheViewImpl<>(ThreadChannel.class, Channel::getName);
-    protected final SnowflakeCacheViewImpl<ForumChannel> forumChannelsCache = new SnowflakeCacheViewImpl<>(ForumChannel.class, Channel::getName);
-    protected final SnowflakeCacheViewImpl<PrivateChannel> privateChannelCache = new SnowflakeCacheViewImpl<>(PrivateChannel.class, Channel::getName);
-    protected final LinkedList<Long> privateChannelLRU = new LinkedList<>();
+    protected final ChannelCacheViewImpl<Channel> channelCache = new ChannelCacheViewImpl<>(Channel.class);
+    protected final ArrayDeque<Long> privateChannelLRU = new ArrayDeque<>();
 
     protected final AbstractCacheView<AudioManager> audioManagers = new CacheView.SimpleCacheView<>(AudioManager.class, m -> m.getGuild().getName());
 
@@ -131,6 +119,7 @@ public class JDAImpl implements JDA
     protected final ThreadingConfig threadConfig;
     protected final SessionConfig sessionConfig;
     protected final MetaConfig metaConfig;
+    protected final RestConfig restConfig;
 
     public ShutdownReason shutdownReason = ShutdownReason.USER_SHUTDOWN; // indicates why shutdown happened in awaitStatus / awaitReady
     protected WebSocketClient client;
@@ -155,21 +144,20 @@ public class JDAImpl implements JDA
 
     public JDAImpl(AuthorizationConfig authConfig)
     {
-        this(authConfig, null, null, null);
+        this(authConfig, null, null, null, null);
     }
 
     public JDAImpl(
             AuthorizationConfig authConfig, SessionConfig sessionConfig,
-            ThreadingConfig threadConfig, MetaConfig metaConfig)
+            ThreadingConfig threadConfig, MetaConfig metaConfig, RestConfig restConfig)
     {
         this.authConfig = authConfig;
         this.threadConfig = threadConfig == null ? ThreadingConfig.getDefault() : threadConfig;
         this.sessionConfig = sessionConfig == null ? SessionConfig.getDefault() : sessionConfig;
         this.metaConfig = metaConfig == null ? MetaConfig.getDefault() : metaConfig;
+        this.restConfig = restConfig == null ? new RestConfig() : restConfig;
         this.shutdownHook = this.metaConfig.isUseShutdownHook() ? new Thread(this::shutdownNow, "JDA Shutdown Hook") : null;
         this.presence = new PresenceImpl(this);
-        this.requester = new Requester(this);
-        this.requester.setRetryOnTimeout(this.sessionConfig.isRetryOnTimeout());
         this.guildSetupController = new GuildSetupController(this);
         this.audioController = new DirectAudioControllerImpl(this);
         this.eventCache = new EventCache();
@@ -189,11 +177,6 @@ public class JDAImpl implements JDA
     public boolean isEventPassthrough()
     {
         return sessionConfig.isEventPassthrough();
-    }
-
-    public boolean isRelativeRateLimit()
-    {
-        return sessionConfig.isRelativeRateLimit();
     }
 
     public boolean isCacheFlagSet(CacheFlag flag)
@@ -278,9 +261,24 @@ public class JDAImpl implements JDA
             if (privateChannelLRU.size() > 10) // This could probably be a config option
             {
                 long removed = privateChannelLRU.removeLast();
-                privateChannelCache.remove(removed);
+                channelCache.remove(ChannelType.PRIVATE, removed);
             }
         }
+    }
+
+    public void initRequester()
+    {
+        if (this.requester != null)
+            return;
+        RestRateLimiter rateLimiter = this.restConfig.getRateLimiterFactory().apply(
+                new RestRateLimiter.RateLimitConfig(
+                        this.threadConfig.getRateLimitScheduler(),
+                        this.threadConfig.getRateLimitElastic(),
+                        getSessionController().getRateLimitHandle(),
+                        this.sessionConfig.isRelativeRateLimit() && this.restConfig.isRelativeRateLimit()
+                ));
+        this.requester = new Requester(this, this.authConfig, this.restConfig, rateLimiter);
+        this.requester.setRetryOnTimeout(this.sessionConfig.isRetryOnTimeout());
     }
 
     public int login()
@@ -296,8 +294,12 @@ public class JDAImpl implements JDA
     public int login(String gatewayUrl, ShardInfo shardInfo, Compression compression, boolean validateToken, int intents, GatewayEncoding encoding)
     {
         this.shardInfo = shardInfo;
-        threadConfig.init(this::getIdentifierString);
-        requester.getRateLimiter().init();
+
+        // Delayed init for thread-pools so they can set the shard info as their name
+        this.threadConfig.init(this::getIdentifierString);
+        // Setup rest-module and rate-limiter subsystem
+        initRequester();
+
         this.gatewayUrl = gatewayUrl == null ? getGateway() : gatewayUrl;
         Checks.notNull(this.gatewayUrl, "Gateway URL");
 
@@ -403,7 +405,7 @@ public class JDAImpl implements JDA
                 return;
             }
 
-            throw new InvalidTokenException("The provided token is invalid!");
+            throw new InvalidTokenException();
         }
         catch (Throwable error)
         {
@@ -560,7 +562,7 @@ public class JDAImpl implements JDA
     @Override
     public ScheduledExecutorService getRateLimitPool()
     {
-        return threadConfig.getRateLimitPool();
+        return threadConfig.getRateLimitScheduler();
     }
 
     @Nonnull
@@ -609,9 +611,9 @@ public class JDAImpl implements JDA
         Checks.notNull(users, "users");
         for(User u : users)
             Checks.notNull(u, "All users");
-        return Collections.unmodifiableList(getGuilds().stream()
+        return getGuilds().stream()
                 .filter(guild -> users.stream().allMatch(guild::isMember))
-                .collect(Collectors.toList()));
+                .collect(Helpers.toUnmodifiableList());
     }
 
     @Nonnull
@@ -720,58 +722,72 @@ public class JDAImpl implements JDA
 
     @Nonnull
     @Override
+    public ChannelCacheView<Channel> getChannelCache()
+    {
+        return channelCache;
+    }
+
+    @Nonnull
+    @Override
     public SnowflakeCacheView<Category> getCategoryCache()
     {
-        return categories;
+        return channelCache.ofType(Category.class);
     }
 
     @Nonnull
     @Override
     public SnowflakeCacheView<TextChannel> getTextChannelCache()
     {
-        return textChannelCache;
+        return channelCache.ofType(TextChannel.class);
     }
 
     @Nonnull
     @Override
     public SnowflakeCacheView<NewsChannel> getNewsChannelCache()
     {
-        return newsChannelCache;
+        return channelCache.ofType(NewsChannel.class);
     }
 
     @Nonnull
     @Override
     public SnowflakeCacheView<VoiceChannel> getVoiceChannelCache()
     {
-        return voiceChannelCache;
+        return channelCache.ofType(VoiceChannel.class);
     }
 
     @Nonnull
     @Override
     public SnowflakeCacheView<StageChannel> getStageChannelCache()
     {
-        return stageChannelCache;
+        return channelCache.ofType(StageChannel.class);
     }
 
     @Nonnull
     @Override
     public SnowflakeCacheView<ThreadChannel> getThreadChannelCache()
     {
-        return threadChannelsCache;
+        return channelCache.ofType(ThreadChannel.class);
     }
 
     @Nonnull
     @Override
     public SnowflakeCacheView<ForumChannel> getForumChannelCache()
     {
-        return forumChannelsCache;
+        return channelCache.ofType(ForumChannel.class);
+    }
+
+    @Nonnull
+    @Override
+    public SnowflakeCacheView<MediaChannel> getMediaChannelCache()
+    {
+        return channelCache.ofType(MediaChannel.class);
     }
 
     @Nonnull
     @Override
     public SnowflakeCacheView<PrivateChannel> getPrivateChannelCache()
     {
-        return privateChannelCache;
+        return channelCache.ofType(PrivateChannel.class);
     }
 
     @Override
@@ -787,6 +803,25 @@ public class JDAImpl implements JDA
         if (channel != null)
             usedPrivateChannel(id);
         return channel;
+    }
+
+    @Override
+    public <T extends Channel> T getChannelById(@Nonnull Class<T> type, long id)
+    {
+        return channelCache.ofType(type).getElementById(id);
+    }
+
+    @Override
+    public GuildChannel getGuildChannelById(long id)
+    {
+        return channelCache.ofType(GuildChannel.class).getElementById(id);
+    }
+
+    @Override
+    public GuildChannel getGuildChannelById(@Nonnull ChannelType type, long id)
+    {
+        Channel channel = channelCache.getElementById(type, id);
+        return channel instanceof GuildChannel ? (GuildChannel) channel : null;
     }
 
     @Nonnull
@@ -832,7 +867,7 @@ public class JDAImpl implements JDA
     @Override
     public synchronized void shutdownNow()
     {
-        requester.shutdown(); // stop all requests
+        requester.stop(true, this::shutdownRequester); // stop all requests
         shutdown();
         threadConfig.shutdownNow();
     }
@@ -867,8 +902,7 @@ public class JDAImpl implements JDA
         guildSetupController.close();
 
         // stop accepting new requests
-        if (requester.stop())    // returns true if no more requests will be executed
-            shutdownRequester(); // in that case shutdown entirely
+        requester.stop(false, this::shutdownRequester);
         threadConfig.shutdown();
 
         if (shutdownHook != null)
@@ -889,7 +923,6 @@ public class JDAImpl implements JDA
     public void shutdownRequester()
     {
         // Stop all request processing
-        requester.shutdown();
         threadConfig.shutdownRequester();
 
         // If the websocket has been shutdown too, we can fire the shutdown event
@@ -945,13 +978,6 @@ public class JDAImpl implements JDA
         return eventManager.getSubject();
     }
 
-    @Nonnull
-    @Override
-    public AccountType getAccountType()
-    {
-        return authConfig.getAccountType();
-    }
-
     @Override
     public void setEventManager(IEventManager eventManager)
     {
@@ -981,6 +1007,13 @@ public class JDAImpl implements JDA
     public List<Object> getRegisteredListeners()
     {
         return eventManager.getRegisteredListeners();
+    }
+
+    @Nonnull
+    @Override
+    public <E extends GenericEvent> Once.Builder<E> listenOnce(@Nonnull Class<E> eventType)
+    {
+        return new Once.Builder<>(this, eventType);
     }
 
     @Nonnull
@@ -1125,7 +1158,6 @@ public class JDAImpl implements JDA
     @Override
     public RestAction<ApplicationInfo> retrieveApplicationInfo()
     {
-        AccountTypeException.check(getAccountType(), AccountType.BOT);
         Route.CompiledRoute route = Route.Applications.GET_BOT_APPLICATION.compile();
         return new RestActionImpl<>(this, route, (response, request) ->
         {
@@ -1133,6 +1165,37 @@ public class JDAImpl implements JDA
             this.clientId = info.getId();
             return info;
         });
+    }
+
+    @Nonnull
+    @Override
+    public EntitlementPaginationAction retrieveEntitlements()
+    {
+        return new EntitlementPaginationActionImpl(this);
+    }
+
+    @Nonnull
+    @Override
+    public RestAction<Entitlement> retrieveEntitlementById(long entitlementId)
+    {
+        return new RestActionImpl<>(this, Route.Applications.GET_ENTITLEMENT.compile(getSelfUser().getApplicationId(), Long.toUnsignedString(entitlementId)));
+    }
+
+    @Nonnull
+    @Override
+    public TestEntitlementCreateAction createTestEntitlement(long skuId, long ownerId, @Nonnull TestEntitlementCreateActionImpl.OwnerType ownerType)
+    {
+        Checks.notNull(ownerType, "ownerType");
+
+        return new TestEntitlementCreateActionImpl(this, skuId, ownerId, ownerType);
+    }
+
+    @Nonnull
+    @Override
+    public RestAction<Void> deleteTestEntitlement(long entitlementId)
+    {
+        Route.CompiledRoute route = Route.Applications.DELETE_TEST_ENTITLEMENT.compile(getSelfUser().getApplicationId(), Long.toUnsignedString(entitlementId));
+        return new RestActionImpl<>(this, route);
     }
 
     @Nonnull
@@ -1245,44 +1308,9 @@ public class JDAImpl implements JDA
         return guildCache;
     }
 
-    public SnowflakeCacheViewImpl<Category> getCategoriesView()
+    public ChannelCacheViewImpl<Channel> getChannelsView()
     {
-        return categories;
-    }
-
-    public SnowflakeCacheViewImpl<TextChannel> getTextChannelsView()
-    {
-        return textChannelCache;
-    }
-
-    public SnowflakeCacheViewImpl<NewsChannel> getNewsChannelView()
-    {
-        return newsChannelCache;
-    }
-
-    public SnowflakeCacheViewImpl<VoiceChannel> getVoiceChannelsView()
-    {
-        return voiceChannelCache;
-    }
-
-    public SnowflakeCacheViewImpl<StageChannel> getStageChannelView()
-    {
-        return stageChannelCache;
-    }
-
-    public SnowflakeCacheViewImpl<ThreadChannel> getThreadChannelsView()
-    {
-        return threadChannelsCache;
-    }
-
-    public SnowflakeCacheViewImpl<ForumChannel> getForumChannelsView()
-    {
-        return forumChannelsCache;
-    }
-
-    public SnowflakeCacheViewImpl<PrivateChannel> getPrivateChannelsView()
-    {
-        return privateChannelCache;
+        return this.channelCache;
     }
 
     public AbstractCacheView<AudioManager> getAudioManagersView()

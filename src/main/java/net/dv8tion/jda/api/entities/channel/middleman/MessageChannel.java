@@ -15,7 +15,6 @@
  */
 package net.dv8tion.jda.api.entities.channel.middleman;
 
-import net.dv8tion.jda.api.AccountType;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -25,17 +24,19 @@ import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
-import net.dv8tion.jda.api.exceptions.AccountTypeException;
+import net.dv8tion.jda.api.exceptions.ParsingException;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.LayoutComponent;
 import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.interactions.components.selections.SelectMenu;
 import net.dv8tion.jda.api.requests.RestAction;
+import net.dv8tion.jda.api.requests.Route;
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 import net.dv8tion.jda.api.requests.restaction.MessageEditAction;
 import net.dv8tion.jda.api.requests.restaction.pagination.MessagePaginationAction;
 import net.dv8tion.jda.api.requests.restaction.pagination.PaginationAction;
+import net.dv8tion.jda.api.requests.restaction.pagination.PollVotersPaginationAction;
 import net.dv8tion.jda.api.requests.restaction.pagination.ReactionPaginationAction;
 import net.dv8tion.jda.api.utils.AttachedFile;
 import net.dv8tion.jda.api.utils.FileUpload;
@@ -43,17 +44,19 @@ import net.dv8tion.jda.api.utils.MiscUtil;
 import net.dv8tion.jda.api.utils.data.DataArray;
 import net.dv8tion.jda.api.utils.messages.MessageCreateData;
 import net.dv8tion.jda.api.utils.messages.MessageEditData;
+import net.dv8tion.jda.api.utils.messages.MessagePollData;
 import net.dv8tion.jda.internal.JDAImpl;
 import net.dv8tion.jda.internal.entities.EntityBuilder;
 import net.dv8tion.jda.internal.requests.RestActionImpl;
-import net.dv8tion.jda.internal.requests.Route;
 import net.dv8tion.jda.internal.requests.restaction.AuditableRestActionImpl;
 import net.dv8tion.jda.internal.requests.restaction.MessageCreateActionImpl;
 import net.dv8tion.jda.internal.requests.restaction.MessageEditActionImpl;
 import net.dv8tion.jda.internal.requests.restaction.pagination.MessagePaginationActionImpl;
+import net.dv8tion.jda.internal.requests.restaction.pagination.PollVotersPaginationActionImpl;
 import net.dv8tion.jda.internal.requests.restaction.pagination.ReactionPaginationActionImpl;
 import net.dv8tion.jda.internal.utils.Checks;
-import net.dv8tion.jda.internal.utils.EncodingUtil;
+import net.dv8tion.jda.internal.utils.JDALogger;
+import org.jetbrains.annotations.Unmodifiable;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -303,6 +306,12 @@ public interface MessageChannel extends Channel, Formattable
      *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
      *     <br>If this is a {@link net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel PrivateChannel} and the currently logged in account
      *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
      * </ul>
      *
      * @param  text
@@ -337,6 +346,12 @@ public interface MessageChannel extends Channel, Formattable
      *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
      *     <br>If this is a {@link net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel PrivateChannel} and the currently logged in account
      *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
      * </ul>
      *
      * @param  msg
@@ -373,6 +388,12 @@ public interface MessageChannel extends Channel, Formattable
      *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
      *     <br>If this is a {@link net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel PrivateChannel} and the currently logged in account
      *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
      * </ul>
      *
      * @param  format
@@ -416,6 +437,12 @@ public interface MessageChannel extends Channel, Formattable
      *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
      *     <br>If this is a {@link net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel PrivateChannel} and the currently logged in account
      *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
      * </ul>
      *
      * <p><b>Example: Attachment Images</b>
@@ -474,6 +501,12 @@ public interface MessageChannel extends Channel, Formattable
      *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
      *     <br>If this is a {@link PrivateChannel PrivateChannel} and the currently logged in account
      *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
      * </ul>
      *
      * <p><b>Example: Attachment Images</b>
@@ -525,6 +558,12 @@ public interface MessageChannel extends Channel, Formattable
      *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
      *     <br>If this is a {@link PrivateChannel} and the currently logged in account
      *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
      * </ul>
      *
      * @param  component
@@ -565,6 +604,12 @@ public interface MessageChannel extends Channel, Formattable
      *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
      *     <br>If this is a {@link PrivateChannel} and the currently logged in account
      *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
      * </ul>
      *
      * <p><b>Example: Attachment Images</b>
@@ -608,6 +653,52 @@ public interface MessageChannel extends Channel, Formattable
     /**
      * Send a message to this channel.
      *
+     * <p>Possible {@link net.dv8tion.jda.api.requests.ErrorResponse ErrorResponses} include:
+     * <ul>
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#UNKNOWN_CHANNEL UNKNOWN_CHANNEL}
+     *     <br>if this channel was deleted</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
+     *     <br>If this is a {@link PrivateChannel} and the currently logged in account
+     *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#POLL_INVALID_CHANNEL_TYPE POLL_INVALID_CHANNEL_TYPE}
+     *     <br>This channel does not allow polls</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#POLL_WITH_UNUSABLE_EMOJI POLL_WITH_UNUSABLE_EMOJI}
+     *     <br>This poll uses an external emoji that the bot is not allowed to use</li>
+     * </ul>
+     *
+     * @param  poll
+     *         The poll to send
+     *
+     * @throws UnsupportedOperationException
+     *         If this is a {@link PrivateChannel} and the recipient is a bot
+     * @throws IllegalArgumentException
+     *         If the poll is null
+     * @throws net.dv8tion.jda.api.exceptions.InsufficientPermissionException
+     *         If this is a {@link GuildMessageChannel} and this account does not have
+     *         {@link net.dv8tion.jda.api.Permission#VIEW_CHANNEL Permission.VIEW_CHANNEL} or {@link net.dv8tion.jda.api.Permission#MESSAGE_SEND Permission.MESSAGE_SEND}
+     *
+     * @return {@link MessageCreateAction}
+     */
+    @Nonnull
+    @CheckReturnValue
+    default MessageCreateAction sendMessagePoll(@Nonnull MessagePollData poll)
+    {
+        Checks.notNull(poll, "Poll");
+        return new MessageCreateActionImpl(this).setPoll(poll);
+    }
+
+    /**
+     * Send a message to this channel.
+     *
      * <p><b>Resource Handling Note:</b> Once the request is handed off to the requester, for example when you call {@link RestAction#queue()},
      * the requester will automatically clean up all opened files by itself. You are only responsible to close them yourself if it is never handed off properly.
      * For instance, if an exception occurs after using {@link FileUpload#fromData(File)}, before calling {@link RestAction#queue()}.
@@ -621,6 +712,15 @@ public interface MessageChannel extends Channel, Formattable
      *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
      *     <br>If this is a {@link net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel PrivateChannel} and the currently logged in account
      *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#REQUEST_ENTITY_TOO_LARGE REQUEST_ENTITY_TOO_LARGE}
+     *     <br>If the total sum of uploaded bytes exceeds the guild's {@link Guild#getMaxFileSize() upload limit}</li>
      * </ul>
      *
      * <p><b>Example: Attachment Images</b>
@@ -681,6 +781,15 @@ public interface MessageChannel extends Channel, Formattable
      *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_SEND_TO_USER CANNOT_SEND_TO_USER}
      *     <br>If this is a {@link PrivateChannel PrivateChannel} and the currently logged in account
      *         does not share any Guilds with the recipient User</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_AUTOMOD MESSAGE_BLOCKED_BY_AUTOMOD}
+     *     <br>If this message was blocked by an {@link net.dv8tion.jda.api.entities.automod.AutoModRule AutoModRule}</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER MESSAGE_BLOCKED_BY_HARMFUL_LINK_FILTER}
+     *     <br>If this message was blocked by the harmful link filter</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#REQUEST_ENTITY_TOO_LARGE REQUEST_ENTITY_TOO_LARGE}
+     *     <br>If the total sum of uploaded bytes exceeds the guild's {@link Guild#getMaxFileSize() upload limit}</li>
      * </ul>
      *
      * <p><b>Example: Attachment Images</b>
@@ -754,8 +863,6 @@ public interface MessageChannel extends Channel, Formattable
      * @param  messageId
      *         The id of the sought after Message
      *
-     * @throws net.dv8tion.jda.api.exceptions.AccountTypeException
-     *         If the currently logged in account is not from {@link net.dv8tion.jda.api.AccountType#BOT AccountType.BOT}
      * @throws IllegalArgumentException
      *         if the provided {@code messageId} is null or empty.
      * @throws net.dv8tion.jda.api.exceptions.InsufficientPermissionException
@@ -772,7 +879,6 @@ public interface MessageChannel extends Channel, Formattable
     @CheckReturnValue
     default RestAction<Message> retrieveMessageById(@Nonnull String messageId)
     {
-        AccountTypeException.check(getJDA().getAccountType(), AccountType.BOT);
         Checks.isSnowflake(messageId, "Message ID");
 
         JDAImpl jda = (JDAImpl) getJDA();
@@ -810,8 +916,6 @@ public interface MessageChannel extends Channel, Formattable
      * @param  messageId
      *         The id of the sought after Message
      *
-     * @throws net.dv8tion.jda.api.exceptions.AccountTypeException
-     *         If the currently logged in account is not from {@link net.dv8tion.jda.api.AccountType#BOT AccountType.BOT}
      * @throws net.dv8tion.jda.api.exceptions.InsufficientPermissionException
      *         If this is a {@link GuildMessageChannel GuildMessageChannel} and the logged in account does not have
      *         <ul>
@@ -918,6 +1022,108 @@ public interface MessageChannel extends Channel, Formattable
     default AuditableRestAction<Void> deleteMessageById(long messageId)
     {
         return deleteMessageById(Long.toUnsignedString(messageId));
+    }
+
+    /**
+     * End the poll attached to this message.
+     *
+     * <p><b>A bot cannot expire the polls of other users.</b>
+     *
+     * <p>The following {@link net.dv8tion.jda.api.requests.ErrorResponse ErrorResponses} are possible:
+     * <ul>
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#INVALID_AUTHOR_EDIT INVALID_AUTHOR_EDIT}
+     *     <br>If the poll was sent by another user</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_EXPIRE_MISSING_POLL CANNOT_EXPIRE_MISSING_POLL}
+     *     <br>The message did not have a poll attached</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#UNKNOWN_MESSAGE UNKNOWN_MESSAGE}
+     *     <br>The message no longer exists</li>
+     * </ul>
+     *
+     * @param  messageId
+     *         The ID for the poll message
+     *
+     * @throws IllegalArgumentException
+     *         If the provided messageId is not a valid snowflake
+     *
+     * @return {@link AuditableRestAction} - Type: {@link Message}
+     */
+    @Nonnull
+    @CheckReturnValue
+    default AuditableRestAction<Message> endPollById(@Nonnull String messageId)
+    {
+        Checks.isSnowflake(messageId, "Message ID");
+        return new AuditableRestActionImpl<>(getJDA(), Route.Messages.END_POLL.compile(getId(), messageId), (response, request) -> {
+            JDAImpl jda = (JDAImpl) getJDA();
+            return jda.getEntityBuilder().createMessageWithChannel(response.getObject(), MessageChannel.this, false);
+        });
+    }
+
+    /**
+     * End the poll attached to this message.
+     *
+     * <p><b>A bot cannot expire the polls of other users.</b>
+     *
+     * <p>The following {@link net.dv8tion.jda.api.requests.ErrorResponse ErrorResponses} are possible:
+     * <ul>
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#INVALID_AUTHOR_EDIT INVALID_AUTHOR_EDIT}
+     *     <br>If the poll was sent by another user</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#CANNOT_EXPIRE_MISSING_POLL CANNOT_EXPIRE_MISSING_POLL}
+     *     <br>The message did not have a poll attached</li>
+     *
+     *     <li>{@link net.dv8tion.jda.api.requests.ErrorResponse#UNKNOWN_MESSAGE UNKNOWN_MESSAGE}
+     *     <br>The message no longer exists</li>
+     * </ul>
+     *
+     * @param  messageId
+     *         The ID for the poll message
+     *
+     * @return {@link AuditableRestAction} - Type: {@link Message}
+     */
+    @Nonnull
+    @CheckReturnValue
+    default AuditableRestAction<Message> endPollById(long messageId)
+    {
+        return endPollById(Long.toUnsignedString(messageId));
+    }
+
+    /**
+     * Paginate the users who voted for a poll answer.
+     *
+     * @param  messageId
+     *         The message id for the poll
+     * @param  answerId
+     *         The id of the poll answer, usually the ordinal position of the answer (first is 1)
+     *
+     * @throws IllegalArgumentException
+     *         If the message id is not a valid snowflake
+     *
+     * @return {@link PollVotersPaginationAction}
+     */
+    @Nonnull
+    @CheckReturnValue
+    default PollVotersPaginationAction retrievePollVotersById(@Nonnull String messageId, long answerId)
+    {
+        return new PollVotersPaginationActionImpl(getJDA(), getId(), messageId, answerId);
+    }
+
+    /**
+     * Paginate the users who voted for a poll answer.
+     *
+     * @param  messageId
+     *         The message id for the poll
+     * @param  answerId
+     *         The id of the poll answer, usually the ordinal position of the answer (first is 1)
+     *
+     * @return {@link PollVotersPaginationAction}
+     */
+    @Nonnull
+    @CheckReturnValue
+    default PollVotersPaginationAction retrievePollVotersById(long messageId, long answerId)
+    {
+        return new PollVotersPaginationActionImpl(getJDA(), getId(), Long.toUnsignedString(messageId), answerId);
     }
 
     /**
@@ -1672,8 +1878,7 @@ public interface MessageChannel extends Channel, Formattable
         Checks.isSnowflake(messageId, "Message ID");
         Checks.notNull(emoji, "Emoji");
 
-        String encoded = EncodingUtil.encodeReaction(emoji.getAsReactionCode());
-        Route.CompiledRoute route = Route.Messages.ADD_REACTION.compile(getId(), messageId, encoded, "@me");
+        Route.CompiledRoute route = Route.Messages.ADD_REACTION.compile(getId(), messageId, emoji.getAsReactionCode(), "@me");
         return new RestActionImpl<>(getJDA(), route);
     }
 
@@ -1782,8 +1987,7 @@ public interface MessageChannel extends Channel, Formattable
         Checks.isSnowflake(messageId, "Message ID");
         Checks.notNull(emoji, "Emoji");
 
-        String encoded = EncodingUtil.encodeReaction(emoji.getAsReactionCode());
-        Route.CompiledRoute route = Route.Messages.REMOVE_REACTION.compile(getId(), messageId, encoded, "@me");
+        Route.CompiledRoute route = Route.Messages.REMOVE_REACTION.compile(getId(), messageId, emoji.getAsReactionCode(), "@me");
         return new RestActionImpl<>(getJDA(), route);
     }
 
@@ -1882,7 +2086,7 @@ public interface MessageChannel extends Channel, Formattable
         Checks.isSnowflake(messageId, "Message ID");
         Checks.notNull(emoji, "Emoji");
 
-        return new ReactionPaginationActionImpl(this, messageId, EncodingUtil.encodeReaction(emoji.getAsReactionCode()));
+        return new ReactionPaginationActionImpl(this, messageId, emoji.getAsReactionCode());
     }
 
     /**
@@ -2141,19 +2345,26 @@ public interface MessageChannel extends Channel, Formattable
      */
     @Nonnull
     @CheckReturnValue
-    default RestAction<List<Message>> retrievePinnedMessages()
+    default RestAction<@Unmodifiable List<Message>> retrievePinnedMessages()
     {
         JDAImpl jda = (JDAImpl) getJDA();
         Route.CompiledRoute route = Route.Messages.GET_PINNED_MESSAGES.compile(getId());
         return new RestActionImpl<>(jda, route, (response, request) ->
         {
-            LinkedList<Message> pinnedMessages = new LinkedList<>();
             EntityBuilder builder = jda.getEntityBuilder();
             DataArray pins = response.getArray();
+            List<Message> pinnedMessages = new ArrayList<>(pins.length());
 
             for (int i = 0; i < pins.length(); i++)
             {
-                pinnedMessages.add(builder.createMessageWithChannel(pins.getObject(i), MessageChannel.this, false));
+                try
+                {
+                    pinnedMessages.add(builder.createMessageWithChannel(pins.getObject(i), MessageChannel.this, false));
+                }
+                catch (ParsingException | NullPointerException e)
+                {
+                    JDALogger.getLog(getClass()).error("Failed to parse pinned message", e);
+                }
             }
 
             return Collections.unmodifiableList(pinnedMessages);

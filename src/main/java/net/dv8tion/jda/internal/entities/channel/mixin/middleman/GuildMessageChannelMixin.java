@@ -23,14 +23,13 @@ import net.dv8tion.jda.api.entities.channel.unions.GuildMessageChannelUnion;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.entities.sticker.StickerSnowflake;
 import net.dv8tion.jda.api.requests.RestAction;
+import net.dv8tion.jda.api.requests.Route;
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction;
 import net.dv8tion.jda.api.utils.MiscUtil;
 import net.dv8tion.jda.api.utils.TimeUtil;
 import net.dv8tion.jda.internal.requests.RestActionImpl;
-import net.dv8tion.jda.internal.requests.Route;
 import net.dv8tion.jda.internal.requests.restaction.MessageCreateActionImpl;
 import net.dv8tion.jda.internal.utils.Checks;
-import net.dv8tion.jda.internal.utils.EncodingUtil;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -47,6 +46,7 @@ public interface GuildMessageChannelMixin<T extends GuildMessageChannelMixin<T>>
     @CheckReturnValue
     default RestAction<Void> deleteMessagesByIds(@Nonnull Collection<String> messageIds)
     {
+        checkCanAccess();
         checkPermission(Permission.MESSAGE_MANAGE, "Must have MESSAGE_MANAGE in order to bulk delete messages in this channel regardless of author.");
 
         if (messageIds.size() < 2 || messageIds.size() > 100)
@@ -67,10 +67,9 @@ public interface GuildMessageChannelMixin<T extends GuildMessageChannelMixin<T>>
         Checks.notNull(emoji, "Emoji");
         Checks.notNull(user, "User");
 
+        checkCanAccess();
         if (!getJDA().getSelfUser().equals(user))
             checkPermission(Permission.MESSAGE_MANAGE);
-
-        final String encoded = EncodingUtil.encodeReaction(emoji.getAsReactionCode());
 
         String targetUser;
         if (user.equals(getJDA().getSelfUser()))
@@ -78,7 +77,7 @@ public interface GuildMessageChannelMixin<T extends GuildMessageChannelMixin<T>>
         else
             targetUser = user.getId();
 
-        final Route.CompiledRoute route = Route.Messages.REMOVE_REACTION.compile(getId(), messageId, encoded, targetUser);
+        final Route.CompiledRoute route = Route.Messages.REMOVE_REACTION.compile(getId(), messageId, emoji.getAsReactionCode(), targetUser);
         return new RestActionImpl<>(getJDA(), route);
     }
 
@@ -88,6 +87,7 @@ public interface GuildMessageChannelMixin<T extends GuildMessageChannelMixin<T>>
     {
         Checks.isSnowflake(messageId, "Message ID");
 
+        checkCanAccess();
         checkPermission(Permission.MESSAGE_MANAGE);
 
         final Route.CompiledRoute route = Route.Messages.REMOVE_ALL_REACTIONS.compile(getId(), messageId);
@@ -101,10 +101,10 @@ public interface GuildMessageChannelMixin<T extends GuildMessageChannelMixin<T>>
         Checks.notNull(messageId, "Message ID");
         Checks.notNull(emoji, "Emoji");
 
+        checkCanAccess();
         checkPermission(Permission.MESSAGE_MANAGE);
 
-        String code = EncodingUtil.encodeReaction(emoji.getAsReactionCode());
-        Route.CompiledRoute route = Route.Messages.CLEAR_EMOJI_REACTIONS.compile(getId(), messageId, code);
+        Route.CompiledRoute route = Route.Messages.CLEAR_EMOJI_REACTIONS.compile(getId(), messageId, emoji.getAsReactionCode());
         return new RestActionImpl<>(getJDA(), route);
     }
 
@@ -112,7 +112,6 @@ public interface GuildMessageChannelMixin<T extends GuildMessageChannelMixin<T>>
     @Override
     default MessageCreateAction sendStickers(@Nonnull Collection<? extends StickerSnowflake> stickers)
     {
-        checkCanAccessChannel();
         checkCanSendMessage();
         Checks.notEmpty(stickers, "Stickers");
         Checks.noneNull(stickers, "Stickers");
@@ -120,13 +119,10 @@ public interface GuildMessageChannelMixin<T extends GuildMessageChannelMixin<T>>
     }
 
     // ---- Default implementation of parent mixins hooks ----
-    default void checkCanAccessChannel()
-    {
-        checkPermission(Permission.VIEW_CHANNEL);
-    }
 
     default void checkCanSendMessage()
     {
+        checkCanAccess();
         if (getType().isThread())
             checkPermission(Permission.MESSAGE_SEND_IN_THREADS);
         else
@@ -135,32 +131,38 @@ public interface GuildMessageChannelMixin<T extends GuildMessageChannelMixin<T>>
 
     default void checkCanSendMessageEmbeds()
     {
+        checkCanAccess();
         checkPermission(Permission.MESSAGE_EMBED_LINKS);
     }
 
     default void checkCanSendFiles()
     {
+        checkCanAccess();
         checkPermission(Permission.MESSAGE_ATTACH_FILES);
     }
 
     default void checkCanViewHistory()
     {
+        checkCanAccess();
         checkPermission(Permission.MESSAGE_HISTORY);
     }
 
     default void checkCanAddReactions()
     {
+        checkCanAccess();
         checkPermission(Permission.MESSAGE_ADD_REACTION);
         checkPermission(Permission.MESSAGE_HISTORY, "You need MESSAGE_HISTORY to add reactions to a message");
     }
 
     default void checkCanRemoveReactions()
     {
+        checkCanAccess();
         checkPermission(Permission.MESSAGE_HISTORY, "You need MESSAGE_HISTORY to remove reactions from a message");
     }
 
     default void checkCanControlMessagePins()
     {
+        checkCanAccess();
         checkPermission(Permission.MESSAGE_MANAGE, "You need MESSAGE_MANAGE to pin or unpin messages.");
     }
 

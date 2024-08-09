@@ -25,6 +25,7 @@ import net.dv8tion.jda.internal.requests.RestActionImpl;
 import net.dv8tion.jda.internal.requests.restaction.operator.*;
 import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.ContextRunnable;
+import org.jetbrains.annotations.Blocking;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -144,7 +145,7 @@ import java.util.stream.Collectors;
  * which can be avoided by using callbacks over blocking operations:
  * <br>{@link #queue(Consumer)} {@literal >} {@link #complete()}
  *
- * <p>There is a dedicated <a href="https://github.com/DV8FromTheWorld/JDA/wiki/7)-Using-RestAction" target="_blank">wiki page</a>
+ * <p>There is a dedicated <a href="https://github.com/discord-jda/JDA/wiki/7)-Using-RestAction" target="_blank">wiki page</a>
  * for RestActions that can be useful for learning.
  *
  * @param <T>
@@ -625,6 +626,7 @@ public interface RestAction<T>
      *
      * @return The response value
      */
+    @Blocking
     default T complete()
     {
         try
@@ -658,6 +660,7 @@ public interface RestAction<T>
      *
      * @return The response value
      */
+    @Blocking
     T complete(boolean shouldQueue) throws RateLimitedException;
 
     /**
@@ -786,7 +789,6 @@ public interface RestAction<T>
      * @param  consumer
      *         The consuming function to apply to the action result, failures are propagated
      *         into the resulting action
-     *
      *
      * @throws IllegalArgumentException
      *         If the consumer is null
@@ -1351,6 +1353,7 @@ public interface RestAction<T>
      *
      * @return The response value
      */
+    @Blocking
     default T completeAfter(long delay, @Nonnull TimeUnit unit)
     {
         Checks.notNull(unit, "TimeUnit");

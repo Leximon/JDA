@@ -21,6 +21,7 @@ import net.dv8tion.jda.api.entities.channel.concrete.Category;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
+import org.jetbrains.annotations.Unmodifiable;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -28,9 +29,9 @@ import java.util.List;
 /**
  * Represents a {@link GuildChannel} that is capable of containing members.
  *
- * Implementations interpret this meaning as best applies to them:
+ * <p>Implementations interpret this meaning as best applies to them:
  *
- * For example,
+ * <p>For example,
  * <ul>
  *   <li>{@link TextChannel TextChannels} implement this as the {@link net.dv8tion.jda.api.entities.Member members} that have {@link net.dv8tion.jda.api.Permission#VIEW_CHANNEL}</li>
  *   <li>{@link VoiceChannel VoiceChannels} implement this as what {@link net.dv8tion.jda.api.entities.Member members} are currently connected to the channel.</li>
@@ -53,5 +54,6 @@ public interface IMemberContainer extends GuildChannel
      * @return An immutable List of {@link net.dv8tion.jda.api.entities.Member Members} that are in this GuildChannel.
      */
     @Nonnull
+    @Unmodifiable
     List<Member> getMembers();
 }

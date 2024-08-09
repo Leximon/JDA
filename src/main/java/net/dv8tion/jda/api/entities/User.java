@@ -24,6 +24,7 @@ import net.dv8tion.jda.api.utils.MiscUtil;
 import net.dv8tion.jda.internal.entities.UserSnowflakeImpl;
 import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.EntityString;
+import org.jetbrains.annotations.Unmodifiable;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -131,21 +132,41 @@ public interface User extends UserSnowflake
     /**
      * The username of the {@link net.dv8tion.jda.api.entities.User User}. Length is between 2 and 32 characters (inclusive).
      *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
-     *
      * @return Never-null String containing the {@link net.dv8tion.jda.api.entities.User User}'s username.
      */
     @Nonnull
     String getName();
 
     /**
-     * <br>The discriminator of the {@link net.dv8tion.jda.api.entities.User User}. Used to differentiate between users with the same usernames.
+     * The global display name of the user.
+     * <br>This name is not unique and allows more characters.
+     *
+     * <p>This name is usually displayed in the UI.
+     *
+     * @return The global display name or null if unset.
+     */
+    @Nullable
+    String getGlobalName();
+
+    /**
+     * The name visible in the UI.
+     * <br>If the {@link #getGlobalName() global name} is {@code null}, this returns the {@link #getName() username} instead.
+     *
+     * @return The effective display name
+     */
+    @Nonnull
+    default String getEffectiveName()
+    {
+        String globalName = getGlobalName();
+        return globalName != null ? globalName : getName();
+    }
+
+    /**
+     * The discriminator of the {@link net.dv8tion.jda.api.entities.User User}. Used to differentiate between users with the same usernames.
      * <br>This only contains the 4 digits after the username and the #.
      *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
-     * Ex: 6297
+     * <p>For most users, no discriminator is used and this will be {@code "0000"} instead.
+     * The primary use-case for discriminators is bot and guest accounts, to prevent name squatting.
      *
      * @return Never-null String containing the {@link net.dv8tion.jda.api.entities.User User} discriminator.
      */
@@ -156,9 +177,6 @@ public interface User extends UserSnowflake
      * The Discord ID for this user's avatar image.
      * If the user has not set an image, this will return null.
      *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
-     *
      * @return Possibly-null String containing the {@link net.dv8tion.jda.api.entities.User User} avatar id.
      */
     @Nullable
@@ -167,9 +185,6 @@ public interface User extends UserSnowflake
     /**
      * The URL for the user's avatar image.
      * If the user has not set an image, this will return null.
-     *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
      *
      * @return Possibly-null String containing the {@link net.dv8tion.jda.api.entities.User User} avatar url.
      */
@@ -195,50 +210,9 @@ public interface User extends UserSnowflake
     }
 
     /**
-     * The Discord ID for this user's default avatar image.
-     *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
-     *
-     * @return Never-null String containing the {@link net.dv8tion.jda.api.entities.User User} default avatar id.
-     */
-    @Nonnull
-    String getDefaultAvatarId();
-
-    /**
-     * The URL for the user's default avatar image.
-     *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
-     *
-     * @return Never-null String containing the {@link net.dv8tion.jda.api.entities.User User} default avatar url.
-     */
-    @Nonnull
-    default String getDefaultAvatarUrl()
-    {
-        return String.format(DEFAULT_AVATAR_URL, getDefaultAvatarId());
-    }
-
-    /**
-     * Returns an {@link ImageProxy} for this user's default avatar.
-     *
-     * @return Never-null {@link ImageProxy} of this user's default avatar
-     *
-     * @see    #getDefaultAvatarUrl()
-     */
-    @Nonnull
-    default ImageProxy getDefaultAvatar()
-    {
-        return new ImageProxy(getDefaultAvatarUrl());
-    }
-
-    /**
      * The URL for the user's avatar image.
      * If they do not have an avatar set, this will return the URL of their
      * default avatar
-     *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
      *
      * @return  Never-null String containing the {@link net.dv8tion.jda.api.entities.User User} effective avatar url.
      */
@@ -268,9 +242,6 @@ public interface User extends UserSnowflake
      * Returns a completed RestAction if this User has been retrieved using {@link JDA#retrieveUserById(long)}.
      * You can use {@link CacheRestAction#useCache(boolean) useCache(false)} to force the request for a new profile with up-to-date information.
      *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
-     *
      * @return {@link CacheRestAction} - Type: {@link User.Profile}
      */
     @Nonnull
@@ -281,8 +252,7 @@ public interface User extends UserSnowflake
      * The "tag" for this user
      * <p>This is the equivalent of calling {@link java.lang.String#format(String, Object...) String.format}("%#s", user)
      *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
+     * <p>Users without a discriminator use {@code #0000} instead.
      *
      * @return Never-null String containing the tag for this user, for example DV8FromTheWorld#6297
      */
@@ -292,9 +262,6 @@ public interface User extends UserSnowflake
     /**
      * Whether or not the currently logged in user and this user have a currently open
      * {@link net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel PrivateChannel} or not.
-     *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
      *
      * @return True if the logged in account shares a PrivateChannel with this user.
      */
@@ -342,19 +309,14 @@ public interface User extends UserSnowflake
      * Finds and collects all {@link net.dv8tion.jda.api.entities.Guild Guild} instances that contain this {@link net.dv8tion.jda.api.entities.User User} within the current {@link net.dv8tion.jda.api.JDA JDA} instance.<br>
      * <p>This method is a shortcut for {@link net.dv8tion.jda.api.JDA#getMutualGuilds(User...) JDA.getMutualGuilds(User)}.</p>
      *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
-     *
      * @return Immutable list of all {@link net.dv8tion.jda.api.entities.Guild Guilds} that this user is a member of.
      */
     @Nonnull
+    @Unmodifiable
     List<Guild> getMutualGuilds();
 
     /**
      * Returns whether or not the given user is a Bot-Account (special badge in client, some different behaviour)
-     *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
      *
      * @return If the User's Account is marked as Bot
      */
@@ -364,18 +326,12 @@ public interface User extends UserSnowflake
      * Returns whether or not the given user is a System account, which includes the urgent message account
      * and the community updates bot.
      *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
-     *
      * @return Whether the User's account is marked as System
      */
     boolean isSystem();
 
     /**
      * Returns the {@link net.dv8tion.jda.api.JDA JDA} instance of this User
-     *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
      *
      * @return the corresponding JDA instance
      */
@@ -385,9 +341,6 @@ public interface User extends UserSnowflake
     /**
      * Returns the {@link net.dv8tion.jda.api.entities.User.UserFlag UserFlags} of this user.
      *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
-     *
      * @return EnumSet containing the flags of the user.
      */
     @Nonnull
@@ -395,9 +348,6 @@ public interface User extends UserSnowflake
 
     /**
      * Returns the bitmask representation of the {@link net.dv8tion.jda.api.entities.User.UserFlag UserFlags} of this user.
-     *
-     * @throws UnsupportedOperationException
-     *         If this User was created with {@link #fromId(long)}
      *
      * @return bitmask representation of the user's flags.
      */
