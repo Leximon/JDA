@@ -386,6 +386,18 @@ publishing {
             pom.populate()
         }
     }
+
+
+    repositories {
+        maven {
+            name = "leximon-releases"
+            url = uri("https://repo.leximon.dev/releases")
+            credentials {
+                username = properties["repo_user"].toString()
+                password = properties["repo_password"].toString()
+            }
+        }
+    }
 }
 
 val ossrhConfigured = getProjectProperty("ossrhUser") != null
